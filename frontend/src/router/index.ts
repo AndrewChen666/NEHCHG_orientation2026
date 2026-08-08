@@ -5,6 +5,7 @@ import USER from '../pages/user.vue'
 import LOGIN from '../pages/login.vue'
 import SETUP from '../pages/setup.vue'
 import MARKET from '../pages/market.vue'
+import CHALLENGES from '../pages/challenges.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,11 +34,15 @@ const router = createRouter({
     path: '/user',
     name: 'user',
     component: USER,
-    alias: ['/user/challenges', '/user/map'],
+    alias: ['/user/map'],
   }, {
     path: '/user/market',
     name: 'user-market',
     component: MARKET,
+  }, {
+    path: '/user/challenges',
+    name: 'user-challenges',
+    component: CHALLENGES,
   }],
 })
 

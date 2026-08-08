@@ -59,7 +59,24 @@ class ChallengeResultRequest(BaseModel):
     note: str | None = Field(default=None, max_length=500)
 
 
+class MagicChallengeRequest(InteractionGuard):
+    question_id: UUID
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+
+class MagicResultRequest(BaseModel):
+    success: bool
+    note: str | None = Field(default=None, max_length=500)
+
+
+class BlackMarketDrawRequest(InteractionGuard):
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+
+class BlackMarketApplyRequest(BaseModel):
+    note: str | None = Field(default=None, max_length=500)
+
+
 class ClockActionResponse(BaseModel):
     session: SessionSummary
     event_sequence: int | None = None
-

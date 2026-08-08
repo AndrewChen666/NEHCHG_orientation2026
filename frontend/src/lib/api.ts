@@ -1,4 +1,4 @@
-import type { AccessIdentity, GameSnapshot, MarketBoard, PendingChallenge, Role, SessionSummary, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
+import type { AccessIdentity, BlackMarketEffect, GameSnapshot, MagicQuestion, MarketBoard, PendingChallenge, Role, SessionSummary, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
 
@@ -127,6 +127,22 @@ export async function gradeChallenge(challengeId: string, success: boolean, note
     method: 'POST',
     body: JSON.stringify({ success, note }),
   }, token)
+}
+
+export async function getMagicQuestions(sessionId: string, token: string) {
+  return request<MagicQuestion[]>(`/api/v1/sessions/${sessionId}/magic/questions`, {}, token)
+}
+
+export async function createMagicChallenge(payload: { question_id: string; money_pouch_presented: boolean; minimum_team_present: boolean; idempotency_key: string }, token: string) {
+  return request<{ id: string; status: string; replayed: boolean }>('/api/v1/magic-challenges', { method: 'POST', body: JSON.stringify(payload) }, token)
+}
+
+export async function drawBlackMarketCard(payload: { money_pouch_presented: boolean; minimum_team_present: boolean; idempotency_key: string }, token: string) {
+  return request<BlackMarketEffect>('/api/v1/black-market/draw', { method: 'POST', body: JSON.stringify(payload) }, token)
+}
+
+export async function applyBlackMarketEffect(effectId: string, note: string | undefined, token: string) {
+  return request<{ id: string; status: string; requires_manual_apply: boolean }>(`/api/v1/black-market/effects/${effectId}/apply`, { method: 'POST', body: JSON.stringify({ note }) }, token)
 }
 
 export function roleLabel(role: Role) {

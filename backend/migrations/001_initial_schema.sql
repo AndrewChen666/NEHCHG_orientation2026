@@ -158,6 +158,10 @@ CREATE TABLE IF NOT EXISTS magic_challenges (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE magic_challenges ALTER COLUMN result DROP NOT NULL;
+ALTER TABLE magic_challenges ADD COLUMN IF NOT EXISTS judged_by UUID REFERENCES access_codes(id);
+ALTER TABLE magic_challenges ADD COLUMN IF NOT EXISTS judged_at TIMESTAMPTZ;
+
 CREATE TABLE IF NOT EXISTS black_market_cards (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
@@ -175,10 +179,16 @@ CREATE TABLE IF NOT EXISTS black_market_effects (
   card_id UUID NOT NULL REFERENCES black_market_cards(id),
   team_id UUID NOT NULL REFERENCES teams(id),
   status TEXT NOT NULL DEFAULT 'drawn' CHECK (status IN ('drawn', 'applied', 'voided')),
+  idempotency_key TEXT NOT NULL,
   applied_by UUID REFERENCES access_codes(id),
   applied_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE black_market_effects ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+UPDATE black_market_effects SET idempotency_key = id::TEXT WHERE idempotency_key IS NULL;
+ALTER TABLE black_market_effects ALTER COLUMN idempotency_key SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS black_market_effects_idempotency_idx ON black_market_effects(session_id, team_id, idempotency_key);
 
 CREATE TABLE IF NOT EXISTS game_event_counters (
   session_id UUID PRIMARY KEY REFERENCES game_sessions(id) ON DELETE CASCADE,

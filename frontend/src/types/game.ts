@@ -97,3 +97,21 @@ export interface PendingChallenge {
   difficulty_level: number
   created_at: string
 }
+
+export interface MagicQuestion {
+  id: string
+  subject: string
+  difficulty_level: number
+  reward: number
+  prompt?: string | null
+}
+
+export interface BlackMarketEffect {
+  id: string
+  name: string
+  description: string
+  effect_type: string
+  effect_config?: Record<string, unknown>
+  requires_manual_apply: boolean
+  replayed?: boolean
+}
