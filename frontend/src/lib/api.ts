@@ -1,4 +1,4 @@
-import type { AccessIdentity, GameSnapshot, Role, SessionSummary } from '@/types/game'
+import type { AccessIdentity, GameSnapshot, Role, SessionSummary, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
 
@@ -62,6 +62,31 @@ export async function updateClock(sessionId: string, action: 'start' | 'pause' |
   }, token)
 }
 
+export async function getSetup(sessionId: string, token: string) {
+  return request<SetupSnapshot>(`/api/v1/setup/sessions/${sessionId}`, {}, token)
+}
+
+export async function updateTeams(sessionId: string, teams: SetupTeam[], token: string) {
+  return request<{ updated: number }>(`/api/v1/setup/sessions/${sessionId}/teams`, {
+    method: 'PUT',
+    body: JSON.stringify(teams),
+  }, token)
+}
+
+export async function updateMarkets(sessionId: string, markets: SetupMarket[], token: string) {
+  return request<{ updated: number }>(`/api/v1/setup/sessions/${sessionId}/markets`, {
+    method: 'PUT',
+    body: JSON.stringify(markets),
+  }, token)
+}
+
+export async function updateRates(sessionId: string, rates: SetupRate[], token: string) {
+  return request<{ updated: number }>(`/api/v1/setup/sessions/${sessionId}/rates`, {
+    method: 'PUT',
+    body: JSON.stringify({ rates }),
+  }, token)
+}
+
 export function roleLabel(role: Role) {
   return {
     coordinator: '總召控制台',
@@ -71,4 +96,3 @@ export function roleLabel(role: Role) {
 }
 
 export { apiBase }
-

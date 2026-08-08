@@ -3,6 +3,7 @@ import ADMIN from '../pages/admin.vue'
 import MASTER from '../pages/master.vue'
 import USER from '../pages/user.vue'
 import LOGIN from '../pages/login.vue'
+import SETUP from '../pages/setup.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,6 +14,10 @@ const router = createRouter({
     path: '/login',
     name: 'login',
     component: LOGIN,
+  }, {
+    path: '/admin/setup',
+    name: 'admin-setup',
+    component: SETUP,
   }, {
     path: '/admin',
     name: 'admin',

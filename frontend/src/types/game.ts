@@ -49,3 +49,34 @@ export interface GameEvent {
   payload?: Record<string, unknown>
 }
 
+export interface SetupTeam {
+  id: string
+  number: number
+  name: string
+  initial_money: number
+  initial_inventory: Record<string, number>
+}
+
+export interface SetupMarket {
+  id: string
+  code: string
+  name: string
+  map_x?: number | null
+  map_y?: number | null
+}
+
+export interface SetupRate {
+  market_code: string
+  period: number
+  resource_type: 'dragon_egg' | 'time_device' | 'unicorn_blood' | 'basilisk_fang'
+  buy_price: number
+  sell_price: number
+  is_public: boolean
+}
+
+export interface SetupSnapshot {
+  session: { id: string; name: string; status: SessionStatus; scheduled_start?: string | null; current_period: number }
+  teams: SetupTeam[]
+  markets: SetupMarket[]
+  rates: SetupRate[]
+}

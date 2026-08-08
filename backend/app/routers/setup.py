@@ -226,6 +226,140 @@ class RateBatchRequest(BaseModel):
     rates: list[RateSeed] = Field(min_length=1)
 
 
+class TeamConfigUpdate(BaseModel):
+    number: int = Field(ge=1, le=12)
+    name: str = Field(min_length=1, max_length=40)
+    initial_money: int = Field(ge=0)
+    initial_inventory: InventorySeed = Field(default_factory=InventorySeed)
+
+
+class MarketConfigUpdate(BaseModel):
+    code: str = Field(min_length=1, max_length=1)
+    name: str = Field(min_length=1, max_length=40)
+    map_x: float | None = Field(default=None, ge=0, le=100)
+    map_y: float | None = Field(default=None, ge=0, le=100)
+
+
+async def _assert_editable_session(connection, session_id: UUID) -> None:
+    status = await connection.fetchval("SELECT status FROM game_sessions WHERE id = $1 FOR UPDATE", session_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
+    if status not in {"draft", "scheduled"}:
+        raise HTTPException(status_code=409, detail={"code": "SESSION_LOCKED", "message": "場次開始後不能直接修改開局設定。"})
+
+
+@router.get("/sessions/{session_id}")
+async def get_setup(
+    session_id: UUID,
+    pool: Pool = Depends(get_pool),
+    context: AuthContext = Depends(require_roles("coordinator")),
+) -> dict[str, object]:
+    require_session(context, session_id)
+    session = await pool.fetchrow(
+        "SELECT id, name, status, scheduled_start, current_period FROM game_sessions WHERE id = $1",
+        session_id,
+    )
+    if session is None:
+        raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
+    teams = await pool.fetch(
+        """
+        SELECT t.id, t.number, t.name, w.balance AS initial_money,
+               COALESCE(jsonb_object_agg(i.resource_type, i.quantity) FILTER (WHERE i.resource_type IS NOT NULL), '{}'::jsonb) AS initial_inventory
+        FROM teams t
+        JOIN team_wallets w ON w.team_id = t.id
+        LEFT JOIN team_inventory i ON i.team_id = t.id
+        WHERE t.session_id = $1
+        GROUP BY t.id, w.balance
+        ORDER BY t.number
+        """,
+        session_id,
+    )
+    markets = await pool.fetch(
+        "SELECT id, code, name, map_x, map_y FROM markets WHERE session_id = $1 ORDER BY code",
+        session_id,
+    )
+    rates = await pool.fetch(
+        """
+        SELECT m.code AS market_code, r.period, r.resource_type, r.buy_price, r.sell_price, r.is_public
+        FROM market_rates r JOIN markets m ON m.id = r.market_id
+        WHERE m.session_id = $1 ORDER BY m.code, r.period, r.resource_type
+        """,
+        session_id,
+    )
+    return {
+        "session": dict(session),
+        "teams": [dict(team) for team in teams],
+        "markets": [dict(market) for market in markets],
+        "rates": [dict(rate) for rate in rates],
+    }
+
+
+@router.put("/sessions/{session_id}/teams")
+async def update_teams(
+    session_id: UUID,
+    teams: list[TeamConfigUpdate],
+    pool: Pool = Depends(get_pool),
+    context: AuthContext = Depends(require_roles("coordinator")),
+) -> dict[str, int]:
+    require_session(context, session_id)
+    if len(teams) != 12 or len({team.number for team in teams}) != 12:
+        raise HTTPException(status_code=422, detail={"code": "TEAM_LAYOUT_INVALID", "message": "必須提供 1–12 號全部小隊。"})
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await _assert_editable_session(connection, session_id)
+            for team in teams:
+                team_id = await connection.fetchval("SELECT id FROM teams WHERE session_id = $1 AND number = $2", session_id, team.number)
+                if team_id is None:
+                    raise HTTPException(status_code=422, detail={"code": "TEAM_NOT_FOUND", "message": f"找不到第 {team.number} 隊。"})
+                await connection.execute("UPDATE teams SET name = $1 WHERE id = $2", team.name, team_id)
+                await connection.execute("UPDATE team_wallets SET balance = $1, updated_at = NOW() WHERE team_id = $2", team.initial_money, team_id)
+                for resource_type, quantity in team.initial_inventory.as_dict().items():
+                    await connection.execute(
+                        "UPDATE team_inventory SET quantity = $1, updated_at = NOW() WHERE team_id = $2 AND resource_type = $3",
+                        quantity,
+                        team_id,
+                        resource_type,
+                    )
+            await connection.execute(
+                "INSERT INTO audit_logs (session_id, actor_id, action, payload) VALUES ($1, $2, 'setup.teams.update', $3::jsonb)",
+                session_id,
+                context.access_id,
+                json.dumps({"count": len(teams)}),
+            )
+    return {"updated": len(teams)}
+
+
+@router.put("/sessions/{session_id}/markets")
+async def update_markets(
+    session_id: UUID,
+    markets: list[MarketConfigUpdate],
+    pool: Pool = Depends(get_pool),
+    context: AuthContext = Depends(require_roles("coordinator")),
+) -> dict[str, int]:
+    require_session(context, session_id)
+    if len(markets) != 8 or {market.code for market in markets} != set(MARKET_CODES):
+        raise HTTPException(status_code=422, detail={"code": "MARKET_LAYOUT_INVALID", "message": "必須提供 A–H 全部市場。"})
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            await _assert_editable_session(connection, session_id)
+            for market in markets:
+                await connection.execute(
+                    "UPDATE markets SET name = $1, map_x = $2, map_y = $3 WHERE session_id = $4 AND code = $5",
+                    market.name,
+                    market.map_x,
+                    market.map_y,
+                    session_id,
+                    market.code,
+                )
+            await connection.execute(
+                "INSERT INTO audit_logs (session_id, actor_id, action, payload) VALUES ($1, $2, 'setup.markets.update', $3::jsonb)",
+                session_id,
+                context.access_id,
+                json.dumps({"count": len(markets)}),
+            )
+    return {"updated": len(markets)}
+
+
 @router.put("/sessions/{session_id}/rates")
 async def upsert_rates(
     session_id: UUID,
@@ -263,4 +397,3 @@ async def upsert_rates(
                 json.dumps({"count": len(payload.rates)}),
             )
     return {"updated": len(payload.rates)}
-

@@ -42,7 +42,7 @@
     <div class="three-column">
       <section class="section-block"><div class="section-block__head"><div><h2>市場佔領</h2><p>時段 2 尚未開放挑戰</p></div><Icon name="map" size="md" /></div><div class="market-list"><div v-for="market in markets" :key="market.code" class="market-row"><div class="market-row__name"><span class="market-code">{{ market.code }}</span><div><strong>{{ market.name }}</strong><span>{{ market.owner }}</span></div></div><span class="status-badge" :class="market.owner === '開放中' ? 'is-neutral' : 'is-success'">{{ market.owner === '開放中' ? '待佔領' : '已佔領' }}</span></div></div></section>
       <section class="section-block"><div class="section-block__head"><div><h2>遊戲時鐘</h2><p>可排程，也可手動控制</p></div><Icon name="clock" size="md" /></div><div class="notice"><Icon name="spark" size="sm" /><span>目前以伺服器時間計算。若現場需要調整，所有覆寫都會進入稽核紀錄。</span></div><div class="inline-row" style="margin-top: 18px"><span class="mini-label">下一段將於 13:30 自動開始</span><button class="ghost-button" type="button">暫停</button></div></section>
-      <section class="section-block"><div class="section-block__head"><div><h2>快速設定</h2><p>開局資料與事件資料</p></div><Icon name="dashboard" size="md" /></div><div class="action-grid" style="grid-template-columns: 1fr 1fr"><button v-for="item in quickActions" :key="item.label" class="action-tile" type="button"><span class="action-tile__icon"><Icon :name="item.icon" size="sm" /></span><strong>{{ item.label }}</strong><span>{{ item.detail }}</span></button></div></section>
+      <section class="section-block"><div class="section-block__head"><div><h2>快速設定</h2><p>開局資料與事件資料</p></div><Icon name="dashboard" size="md" /></div><div class="action-grid" style="grid-template-columns: 1fr 1fr"><RouterLink v-for="item in quickActions" :key="item.label" :to="item.to" class="action-tile"><span class="action-tile__icon"><Icon :name="item.icon" size="sm" /></span><strong>{{ item.label }}</strong><span>{{ item.detail }}</span></RouterLink></div></section>
     </div>
   </GameShell>
 </template>
@@ -54,7 +54,7 @@ import GameShell from '@/layouts/GameShell.vue'
 import Icon from '@/components/Icon.vue'
 
 const router = useRouter()
-const navItems = [{ to: '/admin', label: '總覽', icon: 'dashboard' }, { to: '/admin/markets', label: '市場與行情', icon: 'market' }, { to: '/admin/teams', label: '隊伍資產', icon: 'team' }, { to: '/admin/map', label: '地圖與佔領', icon: 'map' }]
+const navItems = [{ to: '/admin', label: '總覽', icon: 'dashboard' }, { to: '/admin/setup', label: '開局設定', icon: 'spark' }, { to: '/admin/markets', label: '市場與行情', icon: 'market' }, { to: '/admin/teams', label: '隊伍資產', icon: 'team' }, { to: '/admin/map', label: '地圖與佔領', icon: 'map' }]
 const teams = [
   { number: 7, name: '鳳凰社', note: '剛完成一筆交易', money: 218, ratio: 100, status: '領先中', statusClass: 'is-success' },
   { number: 3, name: '月桂會', note: '持有 2 個據點', money: 196, ratio: 90, status: '持有據點', statusClass: 'is-warning' },
@@ -63,6 +63,6 @@ const teams = [
 ]
 const events = [{ icon: 'market', title: '鳳凰社完成交易', detail: '在北塔市場買入龍蛋 × 1', time: '剛剛' }, { icon: 'spark', title: '月桂會佔領成功', detail: '西廂市場開始計算收益', time: '1 分鐘前' }, { icon: 'alert', title: '有 3 個挑戰待判定', detail: '請提醒對應關主處理', time: '3 分鐘前' }]
 const markets = [{ code: 'A', name: '北塔市場', owner: '鳳凰社' }, { code: 'B', name: '西廂市場', owner: '月桂會' }, { code: 'C', name: '鐘樓市場', owner: '開放中' }]
-const quickActions = [{ icon: 'market', label: '編輯行情', detail: '管理公開與隱藏價格' }, { icon: 'spark', label: '題目與卡片', detail: '設定可抽取內容' }]
+const quickActions = [{ icon: 'spark', label: '開局設定', detail: '隊伍、資產與市場位置', to: '/admin/setup' }, { icon: 'market', label: '編輯行情', detail: '管理公開與隱藏價格', to: '/admin/markets' }]
 const goLogin = () => router.push('/login')
 </script>
