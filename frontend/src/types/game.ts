@@ -1,5 +1,37 @@
-export type Role = 'coordinator' | 'market_master' | 'team_facilitator'
+export type Role = 'coordinator' | 'magic_boss' | 'market_master' | 'team_facilitator'
 export type SessionStatus = 'draft' | 'scheduled' | 'running' | 'paused' | 'finished'
+/** Per-session product identifiers are editable, so this is intentionally not a fixed union. */
+export type ResourceKey = string
+
+export interface ProductConfig {
+  key: ResourceKey
+  name: string
+  short_name: string
+  unit_name: string
+}
+
+export interface GameRules {
+  period_count: number
+  period_duration_minutes: number
+  trade_quantity: number
+  same_market_trade_block: boolean
+  challenge_start_period: number
+  challenge_default_difficulty: number
+  challenge_occupied_difficulty: number
+  challenge_cooldown_minutes: number
+  ownership_rate_per_minute: number
+  magic_start_period: number
+  magic_reward_by_difficulty: number[]
+  black_market_start_period: number
+  black_market_draw_cost: number
+  guard_money_pouch: boolean
+  guard_minimum_team_present: boolean
+}
+
+export interface GameConfig {
+  products: ProductConfig[]
+  rules: GameRules
+}
 
 export interface AccessIdentity {
   access_id: string
@@ -32,6 +64,8 @@ export interface MarketSummary {
   code: string
   name: string
   owner_team_id?: string | null
+  owner_team_number?: number | null
+  owner_team_name?: string | null
 }
 
 export interface GameSnapshot {
@@ -68,7 +102,7 @@ export interface SetupMarket {
 export interface SetupRate {
   market_code: string
   period: number
-  resource_type: 'dragon_egg' | 'time_device' | 'unicorn_blood' | 'basilisk_fang'
+  resource_type: ResourceKey
   buy_price: number
   sell_price: number
   is_public: boolean
@@ -76,6 +110,7 @@ export interface SetupRate {
 
 export interface SetupSnapshot {
   session: { id: string; name: string; status: SessionStatus; scheduled_start?: string | null; current_period: number }
+  config: GameConfig
   teams: SetupTeam[]
   markets: SetupMarket[]
   rates: SetupRate[]
@@ -83,10 +118,20 @@ export interface SetupSnapshot {
 
 export interface MarketBoard {
   session: { current_period: number; status: SessionStatus }
+  config: GameConfig
   markets: MarketSummary[]
   rates: SetupRate[]
+  teams?: MarketTeamSummary[]
   wallet?: number | null
   inventory: { resource_type: string; quantity: number }[]
+}
+
+export interface MarketTeamSummary {
+  id: string
+  number: number
+  name: string
+  money: number
+  inventory: Record<string, number>
 }
 
 export interface PendingChallenge {
@@ -95,6 +140,8 @@ export interface PendingChallenge {
   team_number: number
   team_name: string
   difficulty_level: number
+  result?: 'success' | 'failed' | null
+  ownership_applied_at?: string | null
   created_at: string
 }
 
@@ -104,6 +151,7 @@ export interface MagicQuestion {
   difficulty_level: number
   reward: number
   prompt?: string | null
+  answer_note?: string | null
 }
 
 export interface PendingMagicChallenge {
@@ -114,8 +162,15 @@ export interface PendingMagicChallenge {
   subject: string
   difficulty_level: number
   prompt: string
+  answer_note?: string | null
   reward: number
   created_at: string
+}
+
+export interface MagicChallengeHistory extends PendingMagicChallenge {
+  result: 'success' | 'failed'
+  note?: string | null
+  judged_at?: string | null
 }
 
 export interface BlackMarketEffect {

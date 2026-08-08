@@ -1,4 +1,4 @@
-import type { AccessIdentity, BlackMarketEffect, GameSnapshot, MagicQuestion, MarketBoard, PendingChallenge, PendingMagicChallenge, Role, SessionSummary, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
+import type { AccessIdentity, BlackMarketEffect, GameConfig, GameSnapshot, MagicChallengeHistory, MagicQuestion, MarketBoard, PendingChallenge, PendingMagicChallenge, Role, SessionSummary, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
 
@@ -56,6 +56,10 @@ export async function getSnapshot(sessionId: string, token: string) {
   return request<GameSnapshot>(`/api/v1/sessions/${sessionId}/snapshot`, {}, token)
 }
 
+export async function getGameConfig(sessionId: string, token: string) {
+  return request<GameConfig>(`/api/v1/sessions/${sessionId}/config`, {}, token)
+}
+
 export async function updateClock(sessionId: string, action: 'start' | 'pause' | 'resume' | 'finish', token: string) {
   return request<{ session: SessionSummary; event_sequence?: number }>(`/api/v1/sessions/${sessionId}/${action}`, {
     method: 'POST',
@@ -87,19 +91,28 @@ export async function updateRates(sessionId: string, rates: SetupRate[], token: 
   }, token)
 }
 
+export async function updateConfig(sessionId: string, config: GameConfig, token: string) {
+  return request<{ updated: boolean }>(`/api/v1/setup/sessions/${sessionId}/config`, {
+    method: 'PUT',
+    body: JSON.stringify(config),
+  }, token)
+}
+
 export async function getMarketBoard(sessionId: string, token: string) {
   return request<MarketBoard>(`/api/v1/sessions/${sessionId}/markets`, {}, token)
 }
 
 export async function createTransaction(payload: {
   market_id: string
+  team_id: string
   resource_type: SetupRate['resource_type']
   direction: 'buy' | 'sell'
+  quantity: number
   money_pouch_presented: boolean
   minimum_team_present: boolean
   idempotency_key: string
 }, token: string) {
-  return request<{ id: string; amount: number; replayed: boolean }>('/api/v1/markets/' + payload.market_id + '/transactions', {
+  return request<{ id: string; amount: number; quantity: number; replayed: boolean }>('/api/v1/markets/' + payload.market_id + '/transactions', {
     method: 'POST',
     body: JSON.stringify(payload),
   }, token)
@@ -129,16 +142,26 @@ export async function gradeChallenge(challengeId: string, success: boolean, note
   }, token)
 }
 
+export async function applyChallengeOwnership(challengeId: string, token: string) {
+  return request<{ id: string; result: string; ownership_applied: boolean; team_id: string }>(`/api/v1/challenges/${challengeId}/ownership`, {
+    method: 'POST',
+  }, token)
+}
+
 export async function getMagicQuestions(sessionId: string, token: string) {
   return request<MagicQuestion[]>(`/api/v1/sessions/${sessionId}/magic/questions`, {}, token)
 }
 
-export async function createMagicChallenge(payload: { question_id: string; money_pouch_presented: boolean; minimum_team_present: boolean; idempotency_key: string }, token: string) {
+export async function createMagicChallenge(payload: { team_id: string; question_id: string; money_pouch_presented: boolean; minimum_team_present: boolean; idempotency_key: string }, token: string) {
   return request<{ id: string; status: string; replayed: boolean }>('/api/v1/magic-challenges', { method: 'POST', body: JSON.stringify(payload) }, token)
 }
 
 export async function getPendingMagicChallenges(sessionId: string, token: string) {
   return request<PendingMagicChallenge[]>(`/api/v1/sessions/${sessionId}/magic-challenges/pending`, {}, token)
+}
+
+export async function getMagicChallengeHistory(sessionId: string, token: string) {
+  return request<MagicChallengeHistory[]>(`/api/v1/sessions/${sessionId}/magic-challenges/history`, {}, token)
 }
 
 export async function gradeMagicChallenge(challengeId: string, success: boolean, note: string | undefined, token: string) {
@@ -159,6 +182,7 @@ export async function applyBlackMarketEffect(effectId: string, note: string | un
 export function roleLabel(role: Role) {
   return {
     coordinator: '總召控制台',
+    magic_boss: '隱藏魔王工作台',
     market_master: '市場關主台',
     team_facilitator: '隊伍工作區',
   }[role]

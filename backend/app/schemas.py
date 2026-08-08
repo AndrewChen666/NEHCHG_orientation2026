@@ -43,8 +43,17 @@ class InteractionGuard(BaseModel):
 
 class TransactionRequest(InteractionGuard):
     market_id: UUID
-    resource_type: Literal["dragon_egg", "time_device", "unicorn_blood", "basilisk_fang"]
+    resource_type: str = Field(min_length=2, max_length=40, pattern=r"^[a-z][a-z0-9_]{1,39}$")
     direction: Literal["buy", "sell"]
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+
+class MarketMasterTransactionRequest(InteractionGuard):
+    market_id: UUID
+    team_id: UUID
+    resource_type: str = Field(min_length=2, max_length=40, pattern=r"^[a-z][a-z0-9_]{1,39}$")
+    direction: Literal["buy", "sell"]
+    quantity: int = Field(ge=1, le=999)
     idempotency_key: str = Field(min_length=8, max_length=128)
 
 
@@ -60,6 +69,7 @@ class ChallengeResultRequest(BaseModel):
 
 
 class MagicChallengeRequest(InteractionGuard):
+    team_id: UUID
     question_id: UUID
     idempotency_key: str = Field(min_length=8, max_length=128)
 
