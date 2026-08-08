@@ -106,6 +106,18 @@ export interface MagicQuestion {
   prompt?: string | null
 }
 
+export interface PendingMagicChallenge {
+  id: string
+  team_id: string
+  team_number: number
+  team_name: string
+  subject: string
+  difficulty_level: number
+  prompt: string
+  reward: number
+  created_at: string
+}
+
 export interface BlackMarketEffect {
   id: string
   name: string
