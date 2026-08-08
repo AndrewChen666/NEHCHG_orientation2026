@@ -18,6 +18,37 @@
 4. 複製 `frontend/.env.example` 為 `frontend/.env`，在 `frontend/` 執行 `npm install`、`npm run dev`。
 5. 開發階段可直接進入 `/admin`、`/master`、`/user` 查看展示快照；接上後端後使用 `/login` 的角色代碼入口。
 
+## Windows 一鍵啟動
+
+專案根目錄已提供 `start.ps1`，會自動檢查 Python／Node.js、建立後端虛擬環境、安裝缺少的依賴、建立 `.env`，並在兩個 PowerShell 視窗啟動前後端。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start.ps1
+```
+
+啟動腳本會自動開啟 `http://localhost:5173`。若 `.env` 還是範例值，後端會以無資料庫模式啟動，方便先查看介面；登入與遊戲操作仍需設定有效的 Supabase `DATABASE_URL`。
+
+常用參數：
+
+```powershell
+# 只啟動前端
+.\start.ps1 -FrontendOnly
+
+# 只啟動後端
+.\start.ps1 -BackendOnly
+
+# 不重新安裝依賴
+.\start.ps1 -SkipInstall
+
+# 不自動開啟瀏覽器
+.\start.ps1 -NoBrowser
+
+# 前端 port 被占用時改用其他 port
+.\start.ps1 -FrontendPort 5174
+```
+
+如果 port 已被本專案服務占用，腳本會直接沿用現有服務；如果是其他程序占用，會顯示程序資訊與處理建議。
+
 ## 重要安全邊界
 
 Supabase service credentials 只能放在 FastAPI 環境變數；不要放進 Vite 的 `VITE_*` 變數，也不要讓前端直接寫 Supabase。正式環境使用 HTTPS／WSS。

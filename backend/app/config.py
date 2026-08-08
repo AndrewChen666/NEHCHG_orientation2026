@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,6 +16,17 @@ class Settings(BaseSettings):
     session_ttl_minutes: int = 720
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        normalized = value.strip()
+        if not normalized or "<password>" in normalized or "<project-ref>" in normalized:
+            return None
+        return normalized
 
     @property
     def cors_origin_list(self) -> list[str]:
