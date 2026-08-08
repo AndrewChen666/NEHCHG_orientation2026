@@ -17,3 +17,10 @@ frontend/node_modules/.tmp/
 .env
 .idea/
 .vscode/settings.json
+
+# docs
+docs/
+DESIGN.md
+PRODUCT.md
+CONTRIBUTING.md
+CONTRIBUTING.md
