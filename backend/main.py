@@ -1,9 +1,7 @@
-import logging
+import uvicorn
 
-from config import setup_logging
+from app.main import app
 
-setup_logging()
-logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logger.info("Starting...")
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
