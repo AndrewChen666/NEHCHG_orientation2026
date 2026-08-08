@@ -31,6 +31,8 @@ Supabase PostgreSQL
 
 每個場次有單調遞增的事件序號。成功操作先寫入資料庫，再由 FastAPI 廣播 `game.event`。前端若斷線，重新連線時先以 REST 取得最新 snapshot，再用 `after_sequence` 補收事件；不依賴 WebSocket 作為唯一資料來源。
 
+瀏覽器 WebSocket 不支援自訂 Authorization header，因此第一版連線使用短期 token query parameter 完成握手；連線建立後不會把 token 寫入事件內容，正式部署需搭配 HTTPS/WSS。
+
 事件最小格式：
 
 ```json

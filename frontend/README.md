@@ -1,4 +1,6 @@
-# admin-frontend
+# 活米村前端
+
+Vue 3＋Vite＋TypeScript 的角色工作台。`/admin` 是總召、`/master` 是市場關主、`/user` 是隊伍工作區；`/login` 是角色代碼入口。
 
 This template should help get you started developing with Vue 3 in Vite.
 
@@ -28,6 +30,8 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 ```sh
 npm install
 ```
+
+複製 `.env.example` 為 `.env` 後，再將 API／WebSocket 位址改成實際 FastAPI 服務。前端不直接寫 Supabase，所有遊戲狀態變更都透過後端 API。
 
 ### Compile and Hot-Reload for Development
 

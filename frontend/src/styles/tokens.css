@@ -1,0 +1,35 @@
+:root {
+  --color-bg: oklch(0.985 0 0);
+  --color-surface: oklch(0.96 0.008 252);
+  --color-surface-raised: oklch(1 0 0);
+  --color-ink: oklch(0.18 0.025 252);
+  --color-muted: oklch(0.46 0.025 252);
+  --color-primary: oklch(0.42 0.13 252);
+  --color-primary-strong: oklch(0.31 0.12 252);
+  --color-primary-soft: oklch(0.93 0.025 252);
+  --color-accent: oklch(0.74 0.14 82);
+  --color-accent-soft: oklch(0.94 0.045 82);
+  --color-success: oklch(0.48 0.12 151);
+  --color-warning: oklch(0.64 0.14 76);
+  --color-danger: oklch(0.52 0.16 25);
+  --color-info: oklch(0.54 0.11 230);
+  --color-border: oklch(0.87 0.018 252);
+  --shadow-soft: 0 4px 8px oklch(0.18 0.025 252 / 0.07);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-modal-backdrop: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+}
+

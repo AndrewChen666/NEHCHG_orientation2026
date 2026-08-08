@@ -5,9 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .db import close_pool, open_pool
-from .dependencies import get_auth_context
 from .realtime import EventBroker
 from .routers import actions, auth, health, sessions
+from .security import decode_session_token
 
 
 @asynccontextmanager
@@ -40,7 +40,11 @@ def create_app() -> FastAPI:
         broker: EventBroker | None = None
         parsed_session_id = None
         try:
-            context = await get_auth_context(websocket.headers.get("authorization"), settings)
+            token = websocket.query_params.get("token")
+            if not token:
+                await websocket.close(code=1008, reason="auth required")
+                return
+            context = decode_session_token(token, settings.session_secret)
             if str(context.session_id) != session_id:
                 await websocket.close(code=1008, reason="session mismatch")
                 return

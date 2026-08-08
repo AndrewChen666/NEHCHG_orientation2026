@@ -2,21 +2,32 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ADMIN from '../pages/admin.vue'
 import MASTER from '../pages/master.vue'
 import USER from '../pages/user.vue'
+import LOGIN from '../pages/login.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [{
+    path: '/',
+    redirect: '/login',
+  }, {
+    path: '/login',
+    name: 'login',
+    component: LOGIN,
+  }, {
     path: '/admin',
     name: 'admin',
-    component: ADMIN
+    component: ADMIN,
+    alias: ['/admin/markets', '/admin/teams', '/admin/map'],
   },{
     path: '/master',
     name: 'master',
-    component: MASTER
+    component: MASTER,
+    alias: ['/master/rates', '/master/challenges'],
   },{
     path: '/user',
     name: 'user',
-    component: USER
+    component: USER,
+    alias: ['/user/market', '/user/challenges', '/user/map'],
   }],
 })
 
