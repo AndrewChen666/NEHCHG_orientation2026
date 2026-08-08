@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     port: int = 8000
     database_url: str | None = None
     session_secret: str = "development-only-change-me"
+    setup_key: str | None = None
     cors_origins: str = "http://localhost:5173"
     session_ttl_minutes: int = 720
 
@@ -23,4 +24,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
