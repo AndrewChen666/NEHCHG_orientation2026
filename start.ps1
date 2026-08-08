@@ -7,7 +7,7 @@ param(
     [ValidateRange(1, 65535)]
     [int]$BackendPort = 8000,
     [ValidateRange(1, 65535)]
-    [int]$FrontendPort = 5173
+    [int]$FrontendPort = 5175
 )
 
 Set-StrictMode -Version Latest
