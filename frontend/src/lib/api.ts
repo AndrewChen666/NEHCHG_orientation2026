@@ -1,4 +1,4 @@
-import type { AccessIdentity, GameSnapshot, Role, SessionSummary, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
+import type { AccessIdentity, GameSnapshot, MarketBoard, PendingChallenge, Role, SessionSummary, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
 
@@ -84,6 +84,48 @@ export async function updateRates(sessionId: string, rates: SetupRate[], token: 
   return request<{ updated: number }>(`/api/v1/setup/sessions/${sessionId}/rates`, {
     method: 'PUT',
     body: JSON.stringify({ rates }),
+  }, token)
+}
+
+export async function getMarketBoard(sessionId: string, token: string) {
+  return request<MarketBoard>(`/api/v1/sessions/${sessionId}/markets`, {}, token)
+}
+
+export async function createTransaction(payload: {
+  market_id: string
+  resource_type: SetupRate['resource_type']
+  direction: 'buy' | 'sell'
+  money_pouch_presented: boolean
+  minimum_team_present: boolean
+  idempotency_key: string
+}, token: string) {
+  return request<{ id: string; amount: number; replayed: boolean }>('/api/v1/markets/' + payload.market_id + '/transactions', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }, token)
+}
+
+export async function createMarketChallenge(payload: {
+  market_id: string
+  difficulty_level: number
+  money_pouch_presented: boolean
+  minimum_team_present: boolean
+  idempotency_key: string
+}, token: string) {
+  return request<{ id: string; status: string; replayed: boolean }>('/api/v1/markets/' + payload.market_id + '/challenge', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }, token)
+}
+
+export async function getPendingChallenges(marketId: string, token: string) {
+  return request<PendingChallenge[]>(`/api/v1/markets/${marketId}/challenges/pending`, {}, token)
+}
+
+export async function gradeChallenge(challengeId: string, success: boolean, note: string | undefined, token: string) {
+  return request<{ id: string; result: string; cooldown_until_effective_ms?: number | null }>(`/api/v1/challenges/${challengeId}/result`, {
+    method: 'POST',
+    body: JSON.stringify({ success, note }),
   }, token)
 }
 

@@ -80,3 +80,20 @@ export interface SetupSnapshot {
   markets: SetupMarket[]
   rates: SetupRate[]
 }
+
+export interface MarketBoard {
+  session: { current_period: number; status: SessionStatus }
+  markets: MarketSummary[]
+  rates: SetupRate[]
+  wallet?: number | null
+  inventory: { resource_type: string; quantity: number }[]
+}
+
+export interface PendingChallenge {
+  id: string
+  team_id: string
+  team_number: number
+  team_name: string
+  difficulty_level: number
+  created_at: string
+}

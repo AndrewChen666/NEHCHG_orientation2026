@@ -4,6 +4,7 @@ import MASTER from '../pages/master.vue'
 import USER from '../pages/user.vue'
 import LOGIN from '../pages/login.vue'
 import SETUP from '../pages/setup.vue'
+import MARKET from '../pages/market.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,7 +33,11 @@ const router = createRouter({
     path: '/user',
     name: 'user',
     component: USER,
-    alias: ['/user/market', '/user/challenges', '/user/map'],
+    alias: ['/user/challenges', '/user/map'],
+  }, {
+    path: '/user/market',
+    name: 'user-market',
+    component: MARKET,
   }],
 })
 

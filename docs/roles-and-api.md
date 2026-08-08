@@ -34,12 +34,20 @@
 
 ### Markets and actions
 
+- `GET /api/v1/sessions/{session_id}/markets`：取得當期市場、角色可見行情、隊伍錢包與物資。
 - `GET /api/v1/markets/{market_id}`：取得角色可見市場狀態與行情。
 - `POST /api/v1/markets/{market_id}/transactions`：單一原料買入／賣出。
 - `POST /api/v1/markets/{market_id}/challenge`：發起市場挑戰。
+- `GET /api/v1/markets/{market_id}/challenges/pending`：關主取得自己市場的待判定挑戰。
 - `POST /api/v1/challenges/{challenge_id}/result`：關主輸入成功／失敗。
 - `POST /api/v1/magic-challenges`：建立隱藏魔王判題結果。
 - `POST /api/v1/black-market/draw`、`POST /api/v1/black-market/effects/{effect_id}/apply`。
+
+### Setup
+
+- `POST /api/v1/setup/sessions`：使用 `X-Setup-Key` 一次建立場次、12 隊、8 市場、初始資產與角色代碼；原始代碼只回傳一次。
+- `GET /api/v1/setup/sessions/{session_id}`：總召讀取未開始場次的設定。
+- `PUT /api/v1/setup/sessions/{session_id}/teams`、`/markets`、`/rates`：總召在 draft／scheduled 狀態修改開局資料。
 
 每個會改變狀態的 POST 都需要：`session_id`、session token、`money_pouch_presented`、`minimum_team_present` 與冪等鍵 `idempotency_key`。回應包含最新資產、事件序號與可供畫面更新的摘要。
 
