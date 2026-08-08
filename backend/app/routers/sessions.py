@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_pool
 from ..dependencies import get_auth_context, get_event_broker, require_roles, require_session
+from ..game_config import normalize_config
 from ..realtime import EventBroker
 from ..schemas import ClockActionResponse, SessionSummary
 from ..security import AuthContext
@@ -73,7 +74,7 @@ async def snapshot(
         """,
         session_id,
     )
-    visible_teams = teams if context.role == "coordinator" else [team for team in teams if team["id"] == context.team_id]
+    visible_teams = teams if context.role in {"coordinator", "magic_boss"} else [team for team in teams if team["id"] == context.team_id]
     visible_markets = markets if context.role in {"coordinator", "market_master"} else markets
     return {
         "session": _summary(row),
@@ -83,6 +84,26 @@ async def snapshot(
             "SELECT COALESCE(MAX(sequence), 0) FROM game_events WHERE session_id = $1", session_id
         ),
     }
+
+
+@router.get("/{session_id}/config")
+async def config(
+    session_id: UUID,
+    pool: Pool = Depends(get_pool),
+    context: AuthContext = Depends(get_auth_context),
+) -> dict[str, object]:
+    """Expose safe display and gameplay settings to every authenticated role."""
+    require_session(context, session_id)
+    row = await pool.fetchrow("SELECT config FROM game_sessions WHERE id = $1", session_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
+    safe_config = normalize_config(row["config"])
+    # The coordinator's setup endpoint is the only place that needs the raw
+    # uploaded image. Keep the general gameplay config lightweight for every
+    # other role instead of broadcasting a multi-megabyte data URL.
+    if context.role != "coordinator":
+        safe_config["map"] = {"image_data_url": None, "width": None, "height": None}
+    return safe_config
 
 
 async def _change_status(

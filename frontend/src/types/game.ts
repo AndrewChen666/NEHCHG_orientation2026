@@ -28,9 +28,16 @@ export interface GameRules {
   guard_minimum_team_present: boolean
 }
 
+export interface MapConfig {
+  image_data_url: string | null
+  width: number | null
+  height: number | null
+}
+
 export interface GameConfig {
   products: ProductConfig[]
   rules: GameRules
+  map: MapConfig
 }
 
 export interface AccessIdentity {
@@ -40,6 +47,15 @@ export interface AccessIdentity {
   team_id?: string | null
   market_id?: string | null
   display_name?: string | null
+}
+
+export interface AccessCodeSummary {
+  access_id: string
+  role: Role
+  display_name: string
+  team_id?: string | null
+  market_id?: string | null
+  active: boolean
 }
 
 export interface SessionSummary {
@@ -59,6 +75,20 @@ export interface TeamSummary {
   money: number
 }
 
+export interface TeamPublicProfile {
+  number: number
+  name: string
+  english_name: string
+  icon: string
+  description: string
+  tone: string
+}
+
+export interface PublicHomeContent {
+  session: { id: string; name: string; status: SessionStatus; scheduled_start?: string | null } | null
+  teams: TeamPublicProfile[]
+}
+
 export interface MarketSummary {
   id: string
   code: string
@@ -66,6 +96,7 @@ export interface MarketSummary {
   owner_team_id?: string | null
   owner_team_number?: number | null
   owner_team_name?: string | null
+  owner_started_elapsed_ms?: number | null
 }
 
 export interface GameSnapshot {
@@ -87,6 +118,10 @@ export interface SetupTeam {
   id: string
   number: number
   name: string
+  english_name: string
+  icon: string
+  description: string
+  tone: string
   initial_money: number
   initial_inventory: Record<string, number>
 }
@@ -117,7 +152,7 @@ export interface SetupSnapshot {
 }
 
 export interface MarketBoard {
-  session: { current_period: number; status: SessionStatus }
+  session: { current_period: number; status: SessionStatus; effective_elapsed_ms?: number }
   config: GameConfig
   markets: MarketSummary[]
   rates: SetupRate[]

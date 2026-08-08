@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str | None = None
     session_secret: str = "development-only-change-me"
     setup_key: str | None = None
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5175"
     session_ttl_minutes: int = 720
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

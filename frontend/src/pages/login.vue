@@ -1,21 +1,28 @@
 <template>
   <main class="login-page">
-    <section class="login-art" aria-label="活米村介紹">
-      <div class="login-art__topline"><span class="brand-mark">活</span><span>大地遊戲・2026</span></div>
+    <section class="login-art" aria-label="活米村入村說明">
+      <div class="login-art__topline"><img class="brand-mark" src="/icon.png" alt="" aria-hidden="true" /><span>LUMOS · NEHCHG MSTC</span></div>
+
       <div class="login-art__copy">
-        <span class="section-kicker">THE MAGIC VILLAGE</span>
-        <h1>準備好，<br />進入活米村。</h1>
-        <p>一場關於市場、勇氣與一點點運氣的校園冒險。請使用你的角色代碼進入工作區。</p>
+        <h1><span>實沂之嶺</span><em>一起放肆</em><em>《Lumos》</em></h1>
+        <p>實驗竹中竹女數資聯合迎新</p>
       </div>
-      <div class="login-art__seal">活<br /><small>米村</small></div>
+
+      <div class="login-art__ledger" aria-label="活動資訊">
+        <div><span>活動日期</span><strong>10 SEP 2026</strong></div>
+        <div><span>參與學校</span><strong>NEHS · HCHS · HGSH</strong></div>
+        <div><span>活動主題</span><strong>MAGIC & SCIENCE</strong></div>
+      </div>
+
+      <div class="login-art__seal" aria-hidden="true"><img class="login-art__seal-icon" src="/icon.png" alt="" /><small>2026</small></div>
+      <div class="login-art__astral" aria-hidden="true"><span></span><i></i><b></b></div>
     </section>
 
     <section class="login-panel">
       <div class="login-panel__inner">
-        <div class="mobile-brand"><span class="brand-mark">活</span><strong>活米村</strong></div>
-        <span class="section-kicker">ACCESS PORTAL</span>
-        <h2>開啟你的工作區</h2>
-        <p class="login-lead">輸入總召提供的場次識別與角色代碼。每個角色看到的資訊會依權限自動整理。</p>
+        <div class="mobile-brand"><img class="brand-mark" src="/icon.png" alt="" aria-hidden="true" /><strong>NEHCHG MSTC</strong></div>
+        <h2>活動工作台登入</h2>
+        <p class="login-lead">輸入總召提供的場次識別與密碼，進入你的角色工作區。</p>
 
         <form class="login-form" @submit.prevent="handleSubmit">
           <label>
@@ -23,21 +30,21 @@
             <input v-model="sessionId" type="text" placeholder="例如：2026-orientation" autocomplete="off" required />
           </label>
           <label>
-            <span>角色代碼</span>
-            <input v-model="accessCode" type="text" placeholder="輸入 6–8 位代碼" autocomplete="one-time-code" required />
+            <span>登入密碼</span>
+            <input v-model="accessCode" type="password" placeholder="輸入總召提供的登入密碼" autocomplete="current-password" required />
           </label>
           <p v-if="errorMessage" class="form-error"><Icon name="alert" size="sm" />{{ errorMessage }}</p>
-          <button class="action-button login-submit" type="submit" :disabled="loading">
-            <span>{{ loading ? '正在確認…' : '進入活米村' }}</span>
+          <button class="action-button login-submit" :class="{ 'is-loading': loading }" type="submit" :disabled="loading" :aria-busy="loading">
+            <span>{{ loading ? '正在核對通行資訊...' : '進入遊戲' }}</span>
             <Icon name="arrow" size="sm" />
           </button>
         </form>
 
         <div class="login-help">
           <Icon name="spark" size="sm" />
-          <span>現場遇到問題？請向總召或所在市場的關主確認代碼。</span>
+          <span>現場遇到問題？請向總召確認你的登入資訊。</span>
         </div>
-        <p class="demo-note">尚未連接伺服器時，直接使用 `/admin`、`/master` 或 `/user` 可預覽角色介面。</p>
+        <p class="demo-note">尚未連接伺服器時，可直接使用 `/admin`、`/boss`、`/master` 或 `/user` 預覽角色介面。</p>
       </div>
     </section>
   </main>
@@ -62,8 +69,8 @@ async function handleSubmit() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const identity = await signIn(sessionId.value.trim(), accessCode.value.trim())
-    await router.push(identity.role === 'coordinator' ? '/admin' : identity.role === 'market_master' ? '/master' : '/user')
+    const identity = await signIn(sessionId.value.trim(), accessCode.value)
+    await router.push(identity.role === 'coordinator' ? '/admin' : identity.role === 'magic_boss' ? '/boss' : identity.role === 'market_master' ? '/master' : '/user')
   } catch (error) {
     errorMessage.value = error instanceof ApiError ? error.message : '目前無法連線，請確認場次識別或稍後再試。'
   } finally {
@@ -73,33 +80,68 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-.login-page { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(420px, .95fr); min-height: 100vh; background: var(--color-bg); }
-.login-art { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 100vh; padding: 42px 10%; overflow: hidden; color: white; background: var(--color-primary-strong); }
-.login-art::after { position: absolute; right: 8%; bottom: 9%; width: 220px; height: 220px; border: 1px solid oklch(0.74 0.14 82 / .35); border-radius: 50%; content: ''; }
-.login-art__topline { display: flex; align-items: center; gap: 12px; color: oklch(0.78 0.03 252); font-size: 11px; letter-spacing: .14em; }
-.brand-mark { display: grid; width: 38px; height: 38px; place-items: center; color: var(--color-primary-strong); background: var(--color-accent); border-radius: 12px; font-family: 'Noto Serif TC', serif; font-size: 21px; font-weight: 900; }
+.login-page { --login-bg: oklch(.1 .04 255); --login-ink: oklch(.91 .025 90); --login-muted: oklch(.72 .03 255); --login-accent: oklch(.78 .14 80); display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(390px, .8fr); min-height: 100vh; color: var(--login-ink); background: var(--login-bg); }
+.login-art { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 100vh; padding: 32px clamp(28px, 7vw, 100px); overflow: hidden; isolation: isolate; background: radial-gradient(circle at 62% 34%, oklch(.3 .13 259 / .72), transparent 30rem), var(--login-bg); }
+.login-art::before { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, var(--login-bg) 0%, transparent 46%), linear-gradient(0deg, var(--login-bg) 0%, transparent 42%), url('/orientation-hero.jpg') 63% 42% / cover no-repeat; content: ''; opacity: .72; mix-blend-mode: screen; filter: saturate(.78) contrast(1.08); }
+.login-art::after { position: absolute; right: 9%; bottom: 17%; width: 210px; height: 210px; border: 1px solid oklch(.78 .14 80 / .28); border-radius: 50%; box-shadow: 0 0 0 18px oklch(.78 .14 80 / .08), 0 0 0 36px oklch(.78 .14 80 / .04); content: ''; }
+.login-art__topline { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; color: var(--login-muted); font-size: 10px; letter-spacing: .12em; }
+.login-art__topline .brand-mark { flex: 0 0 auto; width: 44px; height: 50px; object-fit: contain; filter: drop-shadow(0 3px 4px oklch(.03 .02 255 / .38)); }
 .login-art__copy { position: relative; z-index: 1; max-width: 510px; margin: auto 0; }
-.login-art h1 { margin-top: 12px; font-family: 'Noto Serif TC', serif; font-size: clamp(42px, 5vw, 72px); line-height: 1.12; letter-spacing: -.03em; }
-.login-art p { max-width: 390px; margin-top: 24px; color: oklch(0.82 0.025 252); font-size: 15px; line-height: 1.9; }
-.login-art__seal { position: relative; z-index: 1; width: 78px; height: 78px; padding-top: 13px; color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: 50%; font-family: 'Noto Serif TC', serif; font-size: 24px; line-height: 22px; text-align: center; transform: rotate(-10deg); }
-.login-art__seal small { font-size: 11px; }
-.login-panel { display: grid; place-items: center; padding: 36px; background: var(--color-bg); }
-.login-panel__inner { width: min(100%, 430px); }
-.mobile-brand { display: none; align-items: center; gap: 10px; margin-bottom: 42px; }
-.mobile-brand strong { font-family: 'Noto Serif TC', serif; font-size: 20px; }
-.login-panel h2 { margin-top: 10px; font-family: 'Noto Serif TC', serif; font-size: 30px; letter-spacing: -.02em; }
-.login-lead { margin-top: 10px; color: var(--color-muted); font-size: 13px; line-height: 1.75; }
-.login-form { display: grid; gap: 18px; margin-top: 32px; }
+.login-art__copy .section-kicker { color: var(--login-accent); }
+.login-art__copy h1 { margin-top: 18px; color: var(--login-ink); font-family: Georgia, 'Noto Serif TC', serif; font-size: clamp(48px, 6vw, 84px); font-weight: 400; line-height: .98; letter-spacing: -.03em; }
+.login-art__copy h1 span, .login-art__copy h1 em { display: block; white-space: nowrap; }
+.login-art__copy h1 em { color: var(--login-accent); font-style: normal; }
+.login-art__copy p { max-width: 34ch; margin-top: 24px; color: var(--login-muted); font-size: 14px; line-height: 1.9; }
+.login-art__ledger { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; max-width: 650px; padding-top: 17px; border-top: 1px solid oklch(.78 .14 80 / .4); }
+.login-art__ledger span, .login-art__ledger strong { display: block; }
+.login-art__ledger span { color: var(--login-muted); font-size: 9px; letter-spacing: .08em; }
+.login-art__ledger strong { margin-top: 7px; color: var(--login-ink); font-family: Georgia, serif; font-size: 11px; font-weight: 400; letter-spacing: .03em; }
+.login-art__seal { position: absolute; z-index: 2; right: 14%; bottom: 25%; display: grid; place-content: center; width: 82px; height: 82px; color: var(--login-accent); border: 1px solid var(--login-accent); border-radius: 50%; font-family: Georgia, serif; font-size: 22px; line-height: 18px; text-align: center; transform: rotate(-9deg); }
+.login-art__seal::after { position: absolute; inset: 6px; border: 1px solid oklch(.78 .14 80 / .52); border-radius: inherit; content: ''; }
+.login-art__seal-icon { position: relative; z-index: 1; width: 42px; height: 42px; object-fit: contain; }
+.login-art__seal small { position: relative; z-index: 1; margin-top: -7px; font-size: 9px; }
+.login-art__astral { position: absolute; right: 17%; bottom: 25%; z-index: 1; width: 174px; height: 174px; opacity: .75; }
+.login-art__astral::before, .login-art__astral::after { position: absolute; background: var(--login-accent); content: ''; }
+.login-art__astral::before { top: 50%; left: 0; width: 100%; height: 1px; }
+.login-art__astral::after { top: 0; left: 50%; width: 1px; height: 100%; }
+.login-art__astral span, .login-art__astral i, .login-art__astral b { position: absolute; display: block; width: 6px; height: 6px; background: var(--login-accent); border-radius: 50%; }
+.login-art__astral span { top: 14%; left: 20%; }.login-art__astral i { top: 26%; right: 10%; }.login-art__astral b { right: 20%; bottom: 14%; }
+.login-panel { position: relative; display: grid; place-items: center; padding: 44px clamp(28px, 6vw, 90px); background: oklch(.13 .04 255); border-left: 1px solid oklch(.78 .14 80 / .28); }
+.login-panel::before, .login-panel::after { position: absolute; right: 30px; left: 30px; height: 1px; background: oklch(.78 .14 80 / .22); content: ''; }
+.login-panel::before { top: 30px; }.login-panel::after { bottom: 30px; }
+.login-panel__inner { width: min(100%, 390px); }
+.mobile-brand { display: none; align-items: center; gap: 10px; margin-bottom: 38px; }
+.mobile-brand strong { color: var(--login-ink); font-family: Georgia, 'Noto Serif TC', serif; font-size: 18px; font-weight: 400; }
+.mobile-brand .brand-mark { display: block; width: 36px; height: 42px; object-fit: contain; filter: drop-shadow(0 3px 4px oklch(.03 .02 255 / .38)); }
+.login-panel .section-kicker { color: var(--login-accent); font-size: 10px; letter-spacing: .16em; }
+.login-panel h2 { margin-top: 14px; color: var(--login-ink); font-family: Georgia, 'Noto Serif TC', serif; font-size: 34px; font-weight: 400; letter-spacing: -.02em; }
+.login-lead { margin-top: 12px; color: var(--login-muted); font-size: 13px; line-height: 1.8; }
+.login-form { display: grid; gap: 18px; margin-top: 34px; }
 .login-form label { display: grid; gap: 8px; }
-.login-form label span { color: var(--color-ink); font-size: 12px; font-weight: 800; }
-.login-form input { min-height: 48px; padding: 0 14px; color: var(--color-ink); background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-sm); outline: none; }
-.login-form input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
-.login-submit { width: 100%; min-height: 48px; justify-content: space-between; margin-top: 4px; padding-inline: 18px; }
+.login-form label span { color: var(--login-ink); font-size: 12px; font-weight: 700; }
+.login-form input { min-height: 49px; padding: 0 14px; color: var(--login-ink); background: oklch(.18 .04 255); border: 1px solid oklch(.78 .14 80 / .34); border-radius: 0; outline: none; transition: border-color 160ms ease-out, background 160ms ease-out, box-shadow 160ms ease-out; }
+.login-form input::placeholder { color: oklch(.64 .03 255); }
+.login-form input:focus { border-color: var(--login-accent); background: oklch(.2 .05 255); box-shadow: 0 0 0 3px oklch(.78 .14 80 / .12); }
+.form-error { display: flex; align-items: center; gap: 7px; color: oklch(.8 .13 28); font-size: 12px; }
+.login-submit { width: 100%; min-height: 49px; justify-content: space-between; margin-top: 4px; padding-inline: 18px; color: var(--login-bg); background: var(--login-accent); border-color: var(--login-accent); border-radius: 0; }
+.login-submit:hover { color: var(--login-bg); background: oklch(.85 .13 80); }
 .login-submit:disabled { cursor: wait; opacity: .65; }
-.form-error { display: flex; align-items: center; gap: 7px; color: var(--color-danger); font-size: 12px; }
-.login-help { display: flex; gap: 9px; margin-top: 30px; padding-top: 20px; color: var(--color-muted); border-top: 1px solid var(--color-border); font-size: 11px; line-height: 1.6; }
-.login-help .icon { flex: 0 0 auto; color: var(--color-accent); }
-.demo-note { margin-top: 24px; color: var(--color-muted); font-size: 10px; line-height: 1.6; }
-@media (max-width: 820px) { .login-page { display: block; } .login-art { min-height: 270px; padding: 24px; } .login-art__copy { margin: 50px 0 18px; } .login-art h1 { font-size: 38px; } .login-art p, .login-art__seal { display: none; } .login-panel { display: block; padding: 32px 24px 48px; } .mobile-brand { display: flex; } }
+.login-help { display: flex; gap: 9px; margin-top: 30px; padding-top: 20px; color: var(--login-muted); border-top: 1px solid oklch(.78 .14 80 / .22); font-size: 11px; line-height: 1.6; }
+.login-help .icon { flex: 0 0 auto; color: var(--login-accent); }
+.demo-note { margin-top: 24px; color: oklch(.62 .03 255); font-size: 10px; line-height: 1.6; }
+@media (max-width: 820px) {
+  .login-page { display: block; }
+  .login-art { min-height: 610px; padding: 25px 24px 35px; }
+  .login-art::before { background-position: center, center, 59% 37%; opacity: .62; }
+  .login-art__copy { margin: 94px 0 30px; }
+  .login-art__copy h1 { font-size: clamp(45px, 13vw, 67px); }
+  .login-art__copy p { max-width: 31ch; font-size: 13px; }
+  .login-art__ledger { gap: 10px; }
+  .login-art__ledger strong { font-size: 10px; }
+  .login-art__seal, .login-art__astral { display: none; }
+  .login-panel { display: block; min-height: 540px; padding: 70px 24px 80px; border-top: 1px solid oklch(.78 .14 80 / .28); border-left: 0; }
+  .login-panel::before, .login-panel::after { display: none; }
+  .mobile-brand { display: flex; }
+}
+@media (prefers-reduced-motion: reduce) { .login-form input, .login-submit { transition: none; } }
 </style>
-

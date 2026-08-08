@@ -1,4 +1,4 @@
-import type { AccessIdentity, BlackMarketEffect, GameConfig, GameSnapshot, MagicChallengeHistory, MagicQuestion, MarketBoard, PendingChallenge, PendingMagicChallenge, Role, SessionSummary, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
+import type { AccessCodeSummary, AccessIdentity, BlackMarketEffect, GameConfig, GameSnapshot, MagicChallengeHistory, MagicQuestion, MarketBoard, PendingChallenge, PendingMagicChallenge, PublicHomeContent, Role, SessionSummary, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
 
@@ -52,6 +52,10 @@ export async function getMe(token: string) {
   return request<AccessIdentity>('/api/v1/auth/me', {}, token)
 }
 
+export async function getPublicHome() {
+  return request<PublicHomeContent>('/api/v1/public/home')
+}
+
 export async function getSnapshot(sessionId: string, token: string) {
   return request<GameSnapshot>(`/api/v1/sessions/${sessionId}/snapshot`, {}, token)
 }
@@ -68,6 +72,21 @@ export async function updateClock(sessionId: string, action: 'start' | 'pause' |
 
 export async function getSetup(sessionId: string, token: string) {
   return request<SetupSnapshot>(`/api/v1/setup/sessions/${sessionId}`, {}, token)
+}
+
+export async function rotateMagicBossCode(sessionId: string, token: string) {
+  return request<{ label: string; role: Role; code: string }>(`/api/v1/setup/sessions/${sessionId}/magic-boss-code`, { method: 'POST' }, token)
+}
+
+export async function getAccessCodes(sessionId: string, token: string) {
+  return request<AccessCodeSummary[]>(`/api/v1/setup/sessions/${sessionId}/access-codes`, {}, token)
+}
+
+export async function updateAccessCodePasswords(sessionId: string, passwords: { access_id: string; password: string }[], token: string) {
+  return request<{ updated: number }>(`/api/v1/setup/sessions/${sessionId}/access-code-passwords`, {
+    method: 'PUT',
+    body: JSON.stringify({ passwords }),
+  }, token)
 }
 
 export async function updateTeams(sessionId: string, teams: SetupTeam[], token: string) {
@@ -100,6 +119,20 @@ export async function updateConfig(sessionId: string, config: GameConfig, token:
 
 export async function getMarketBoard(sessionId: string, token: string) {
   return request<MarketBoard>(`/api/v1/sessions/${sessionId}/markets`, {}, token)
+}
+
+export async function updateMarketOwnership(marketId: string, teamId: string | null, token: string) {
+  return request<{ market_id: string; team_id: string | null; ownership_applied: boolean }>(`/api/v1/markets/${marketId}/ownership`, {
+    method: 'PUT',
+    body: JSON.stringify({ team_id: teamId }),
+  }, token)
+}
+
+export async function recordMarketFailure(payload: { market_id: string; team_id: string; note?: string; idempotency_key: string }, token: string) {
+  return request<{ id: string; result: string; replayed: boolean }>(`/api/v1/markets/${payload.market_id}/challenge-failures`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }, token)
 }
 
 export async function createTransaction(payload: {

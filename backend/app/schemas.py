@@ -57,6 +57,16 @@ class MarketMasterTransactionRequest(InteractionGuard):
     idempotency_key: str = Field(min_length=8, max_length=128)
 
 
+class MarketOwnershipUpdateRequest(BaseModel):
+    team_id: UUID | None = None
+
+
+class MarketFailureRecordRequest(BaseModel):
+    team_id: UUID
+    note: str | None = Field(default=None, max_length=500)
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+
 class ChallengeRequest(InteractionGuard):
     market_id: UUID
     difficulty_level: int = Field(default=1, ge=1, le=5)

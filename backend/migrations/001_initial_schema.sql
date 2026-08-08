@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS game_sessions (
 CREATE TABLE IF NOT EXISTS teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
-  number SMALLINT NOT NULL CHECK (number BETWEEN 1 AND 12),
+  number SMALLINT NOT NULL CHECK (number BETWEEN 1 AND 8),
   name TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (session_id, number)
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS markets (
 CREATE TABLE IF NOT EXISTS access_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('coordinator', 'market_master', 'team_facilitator')),
+  role TEXT NOT NULL CHECK (role IN ('coordinator', 'market_master', 'team_facilitator', 'magic_boss')),
   display_name TEXT NOT NULL,
   team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
   market_id UUID REFERENCES markets(id) ON DELETE CASCADE,
@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS access_codes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CHECK ((role = 'coordinator' AND team_id IS NULL AND market_id IS NULL)
       OR (role = 'market_master' AND market_id IS NOT NULL AND team_id IS NULL)
-      OR (role = 'team_facilitator' AND team_id IS NOT NULL AND market_id IS NULL))
+      OR (role = 'team_facilitator' AND team_id IS NOT NULL AND market_id IS NULL)
+      OR (role = 'magic_boss' AND team_id IS NULL AND market_id IS NULL))
 );
 
 CREATE TABLE IF NOT EXISTS team_wallets (
@@ -155,7 +156,9 @@ CREATE TABLE IF NOT EXISTS magic_challenges (
   reward INTEGER NOT NULL DEFAULT 0,
   note TEXT,
   recorded_by UUID NOT NULL REFERENCES access_codes(id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  idempotency_key TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (session_id, idempotency_key)
 );
 
 ALTER TABLE magic_challenges ALTER COLUMN result DROP NOT NULL;

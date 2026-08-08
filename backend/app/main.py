@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .db import close_pool, open_pool
 from .realtime import EventBroker
-from .routers import actions, auth, health, sessions, setup, special
+from .routers import actions, auth, health, public, sessions, setup, special
 from .security import decode_session_token
 
 
@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(health.router)
+    app.include_router(public.router)
     app.include_router(auth.router)
     app.include_router(sessions.router)
     app.include_router(actions.router)

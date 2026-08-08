@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from asyncpg import Pool
@@ -6,10 +7,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from ..db import get_pool
 from ..dependencies import get_auth_context, require_roles, require_session
 from ..game_config import normalize_config, rules_for
-from ..schemas import ChallengeRequest, ChallengeResultRequest, MarketMasterTransactionRequest, TransactionRequest
+from ..schemas import ChallengeRequest, ChallengeResultRequest, MarketFailureRecordRequest, MarketMasterTransactionRequest, MarketOwnershipUpdateRequest, TransactionRequest
 from ..security import AuthContext
 
 router = APIRouter(prefix="/api/v1", tags=["game-actions"])
+
+
+def _effective_elapsed_ms(row: object) -> int:
+    started_at = row["started_at"]
+    if started_at is None:
+        return 0
+    end_at = row["paused_at"] or datetime.now(timezone.utc)
+    pause_ms = int(row["accumulated_pause_ms"] or 0)
+    return max(0, int((end_at - started_at).total_seconds() * 1000) - pause_ms)
 
 
 def _guard(payload: TransactionRequest | MarketMasterTransactionRequest | ChallengeRequest, rules: dict[str, object] | None = None) -> None:
@@ -30,13 +40,17 @@ async def market_board(
     context: AuthContext = Depends(get_auth_context),
 ) -> dict[str, object]:
     require_session(context, session_id)
-    session = await pool.fetchrow("SELECT current_period, status, config FROM game_sessions WHERE id = $1", session_id)
+    session = await pool.fetchrow(
+        "SELECT current_period, status, config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1",
+        session_id,
+    )
     if session is None:
         raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
     markets = await pool.fetch(
         """
         SELECT m.id, m.code, m.name, mo.team_id AS owner_team_id,
-               owner.number AS owner_team_number, owner.name AS owner_team_name
+               owner.number AS owner_team_number, owner.name AS owner_team_name,
+               mo.started_elapsed_ms AS owner_started_elapsed_ms
         FROM markets m
         LEFT JOIN market_ownership mo ON mo.market_id = m.id AND mo.ended_at IS NULL
         LEFT JOIN teams owner ON owner.id = mo.team_id
@@ -78,7 +92,11 @@ async def market_board(
         session_id,
     ) if context.role == "market_master" else []
     return {
-        "session": {"current_period": session["current_period"], "status": session["status"]},
+        "session": {
+            "current_period": session["current_period"],
+            "status": session["status"],
+            "effective_elapsed_ms": _effective_elapsed_ms(session),
+        },
         "markets": [dict(market) for market in markets],
         "rates": [dict(rate) for rate in rates],
         "wallet": wallet["balance"] if wallet else None,
@@ -86,6 +104,101 @@ async def market_board(
         "teams": [dict(team) for team in teams],
         "config": normalize_config(session["config"]),
     }
+
+
+@router.put("/markets/{market_id}/ownership")
+async def update_market_ownership(
+    market_id: UUID,
+    payload: MarketOwnershipUpdateRequest,
+    pool: Pool = Depends(get_pool),
+    context: AuthContext = Depends(require_roles("market_master")),
+) -> dict[str, object]:
+    if context.market_id != market_id:
+        raise HTTPException(status_code=403, detail={"code": "MARKET_SCOPE_INVALID", "message": "目前關主沒有這個市場的佔領權限。"})
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            session = await connection.fetchrow(
+                "SELECT status, config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1 FOR UPDATE",
+                context.session_id,
+            )
+            if session is None:
+                raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
+            if payload.team_id is not None:
+                team = await connection.fetchrow("SELECT id FROM teams WHERE id = $1 AND session_id = $2", payload.team_id, context.session_id)
+                if team is None:
+                    raise HTTPException(status_code=404, detail={"code": "TEAM_NOT_FOUND", "message": "找不到這個場次的小隊。"})
+            elapsed = _effective_elapsed_ms(session)
+            await connection.execute(
+                "UPDATE market_ownership SET ended_at = NOW(), ended_elapsed_ms = $1 WHERE market_id = $2 AND ended_at IS NULL",
+                elapsed,
+                market_id,
+            )
+            if payload.team_id is not None:
+                rules = rules_for(session["config"])
+                await connection.execute(
+                    "INSERT INTO market_ownership (session_id, market_id, team_id, started_at, started_elapsed_ms, rate_per_minute) VALUES ($1, $2, $3, NOW(), $4, $5)",
+                    context.session_id,
+                    market_id,
+                    payload.team_id,
+                    elapsed,
+                    int(rules["ownership_rate_per_minute"]),
+                )
+            await connection.execute(
+                "INSERT INTO audit_logs (session_id, actor_id, action, target_type, target_id, payload) VALUES ($1, $2, 'market_ownership.manual_update', 'market', $3, $4::jsonb)",
+                context.session_id,
+                context.access_id,
+                market_id,
+                '{"source":"market_master"}',
+            )
+    return {"market_id": market_id, "team_id": payload.team_id, "ownership_applied": payload.team_id is not None}
+
+
+@router.post("/markets/{market_id}/challenge-failures")
+async def record_market_failure(
+    market_id: UUID,
+    payload: MarketFailureRecordRequest,
+    pool: Pool = Depends(get_pool),
+    context: AuthContext = Depends(require_roles("market_master")),
+) -> dict[str, object]:
+    if context.market_id != market_id:
+        raise HTTPException(status_code=403, detail={"code": "MARKET_SCOPE_INVALID", "message": "目前關主沒有這個市場的佔領權限。"})
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            existing = await connection.fetchrow(
+                "SELECT id FROM market_challenges WHERE session_id = $1 AND idempotency_key = $2",
+                context.session_id,
+                payload.idempotency_key,
+            )
+            if existing:
+                return {"id": existing["id"], "result": "failed", "replayed": True}
+            session = await connection.fetchrow(
+                "SELECT config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1 FOR UPDATE",
+                context.session_id,
+            )
+            if session is None:
+                raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
+            team = await connection.fetchrow("SELECT id FROM teams WHERE id = $1 AND session_id = $2", payload.team_id, context.session_id)
+            if team is None:
+                raise HTTPException(status_code=404, detail={"code": "TEAM_NOT_FOUND", "message": "找不到這個場次的小隊。"})
+            rules = rules_for(session["config"])
+            occupied = await connection.fetchval("SELECT EXISTS (SELECT 1 FROM market_ownership WHERE market_id = $1 AND ended_at IS NULL)", market_id)
+            difficulty = int(rules["challenge_occupied_difficulty"] if occupied else rules["challenge_default_difficulty"])
+            elapsed = _effective_elapsed_ms(session)
+            challenge_id = await connection.fetchval(
+                """
+                INSERT INTO market_challenges (session_id, market_id, team_id, difficulty_level, result, note, cooldown_until_effective_ms, idempotency_key, created_by, judged_by, judged_at)
+                VALUES ($1, $2, $3, $4, 'failed', $5, $6, $7, $8, $8, NOW()) RETURNING id
+                """,
+                context.session_id,
+                market_id,
+                payload.team_id,
+                difficulty,
+                payload.note,
+                elapsed + int(rules["challenge_cooldown_minutes"]) * 60_000,
+                payload.idempotency_key,
+                context.access_id,
+            )
+    return {"id": challenge_id, "result": "failed", "replayed": False}
 
 
 @router.get("/markets/{market_id}/challenges/pending")

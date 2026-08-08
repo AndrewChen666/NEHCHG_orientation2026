@@ -6,13 +6,13 @@
 
 - `frontend/`：登入入口、總召 `/admin`、關主 `/master`、隊伍 `/user` 與共用設計系統。
 - `backend/`：FastAPI app、API router、即時事件 broker、環境設定與 PostgreSQL migration。
-- `backend/migrations/001_initial_schema.sql`、`002_configurable_rules.sql`、`003_manual_market_operations.sql`：Supabase SQL editor 依序執行的 schema 與流程補充 migration。
+- `backend/migrations/001_initial_schema.sql`、`003_manual_market_operations.sql`、`004_magic_boss_role.sql`、`005_editable_product_identifiers.sql`、`006_team_profiles.sql`、`007_public_team_profiles.sql`：Supabase SQL editor 依序執行的 schema 與流程補充 migration。
 - `PRODUCT.md`、`DESIGN.md`：產品與視覺上下文。
 - `docs/`：遊戲規則、架構、角色權限與 API 契約。
 
 ## 啟動順序
 
-1. 在 Supabase 依序執行 `backend/migrations/001_initial_schema.sql`、`002_configurable_rules.sql`、`003_manual_market_operations.sql`。
+1. 在 Supabase 依序執行 `backend/migrations/001_initial_schema.sql`、`003_manual_market_operations.sql`、`004_magic_boss_role.sql`、`005_editable_product_identifiers.sql`、`006_team_profiles.sql`、`007_public_team_profiles.sql`。
 2. 複製 `backend/.env.example` 為 `backend/.env`，填入 `DATABASE_URL` 與 `SESSION_SECRET`。
 3. 依 `backend/README.md` 安裝 Python 依賴並啟動 FastAPI。
 4. 複製 `frontend/.env.example` 為 `frontend/.env`，在 `frontend/` 執行 `npm install`、`npm run dev`。
