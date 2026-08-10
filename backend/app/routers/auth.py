@@ -27,6 +27,7 @@ def _auth_response(context: AuthContext) -> SessionAccess:
         college_id=context.college_id,
         stage_id=context.stage_id,
         stage_name=context.stage_name,
+        stage_type=context.stage_type,
         available_roles=list(context.available_roles),
     )
 
@@ -178,15 +179,17 @@ async def google_login(
                 participant["id"],
             )
             if not assignments:
+                default_role = "coordinator" if participant["participant_no"] == "COORDINATOR" else "participant"
                 assignment = await connection.fetchrow(
                     """
                     INSERT INTO stage_role_assignments (session_id, stage_id, participant_id, role, scope_type)
-                    VALUES ($1, $2, $3, 'participant', 'session')
+                    VALUES ($1, $2, $3, $4, 'session')
                     RETURNING id, role, team_id, market_id, college_id
                     """,
                     session_id,
                     stage["id"],
                     participant["id"],
+                    default_role,
                 )
                 assignments = [assignment]
             assignment = next((item for item in assignments if item["role"] == payload.role), None) if payload.role else assignments[0]
@@ -207,6 +210,7 @@ async def google_login(
                 college_id=participant["college_id"],
                 stage_id=stage["id"],
                 stage_name=stage["name"],
+                stage_type=stage["stage_type"],
                 available_roles=roles,
             )
     return LoginResponse(

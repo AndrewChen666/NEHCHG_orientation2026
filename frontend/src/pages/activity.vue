@@ -50,7 +50,7 @@
         <button class="action-button primary-mobile-action" type="button" :disabled="!canScore || saving || !selectedTargetId || !Number.isFinite(points) || points === 0" :class="{ 'is-loading': saving }" @click="submitScore">{{ saving ? '送出中…' : `送出 ${points || 0} 分` }}</button>
       </section>
 
-      <section v-else class="section-block waiting-panel"><div class="section-block__head"><div><h2>目前階段不需本工作台操作</h2><p>請依目前身分前往活米村原有工作台，或等待總召切換到破冰／計分階段。</p></div><Icon name="clock" size="lg" /></div><div class="notice"><Icon name="alert" size="sm" /><span>排行榜仍會在下方顯示，並依階段倍率分開計算個人、小隊與學院總分。</span></div></section>
+      <section v-else class="section-block waiting-panel"><div class="section-block__head"><div><h2>目前階段不需本工作台操作</h2><p>請依目前階段的現場安排操作，或等待總召切換到其他活動階段。</p></div><Icon name="clock" size="lg" /></div><div class="notice"><Icon name="alert" size="sm" /><span>排行榜仍會在下方顯示，並依階段倍率分開計算個人、小隊與學院總分。</span></div></section>
 
       <section class="section-block leaderboard-panel">
         <div class="section-block__head"><div><h2>活動排行榜</h2><p>{{ leaderboardScope }}</p></div><span class="status-badge is-neutral">倍率後總分</span></div>
@@ -103,7 +103,12 @@ const canOperateIcebreaker = computed(() => isDemo.value || activeRoles.value.so
 const canScore = computed(() => isDemo.value || activeRoles.value.some((role) => role === 'coordinator' || role === 'score_keeper' || role === 'team_facilitator'))
 const status = computed<SessionStatus>(() => state.snapshot?.session.status || 'draft')
 const period = computed(() => state.snapshot?.session.current_period || 0)
-const navItems = computed(() => state.identity?.role === 'coordinator' ? [{ to: '/admin', label: '總覽', icon: 'dashboard' }, { to: '/admin/activity', label: '活動流程', icon: 'clock' }, { to: '/activity', label: '現場工作台', icon: 'spark' }] : [{ to: '/activity', label: '活動工作台', icon: 'spark' }, { to: '/user', label: '活米村', icon: 'map' }])
+const navItems = computed(() => {
+  if (state.identity?.role === 'coordinator') return [{ to: '/admin', label: '總覽', icon: 'dashboard' }, { to: '/admin/activity', label: '活動流程', icon: 'clock' }, { to: '/activity', label: '現場工作台', icon: 'spark' }]
+  const items = [{ to: '/activity', label: '活動工作台', icon: 'spark' }]
+  if (currentStage.value?.stage_type === 'magic_village') items.push({ to: '/user', label: '活米村', icon: 'map' })
+  return items
+})
 const filteredParticipants = computed(() => {
   const query = participantQuery.value.toLowerCase()
   return participants.value.filter((person) => !query || `${person.participant_no} ${person.display_name}`.toLowerCase().includes(query))

@@ -20,6 +20,7 @@ class AuthContext:
     college_id: UUID | None = None
     stage_id: UUID | None = None
     stage_name: str | None = None
+    stage_type: str | None = None
     available_roles: tuple[str, ...] = ()
 
 
@@ -46,6 +47,7 @@ def create_session_token(context: AuthContext, secret: str, ttl_minutes: int) ->
         "college_id": str(context.college_id) if context.college_id else None,
         "stage_id": str(context.stage_id) if context.stage_id else None,
         "stage_name": context.stage_name,
+        "stage_type": context.stage_type,
         "roles": list(context.available_roles),
         "exp": int(time.time()) + ttl_minutes * 60,
     }
@@ -77,6 +79,7 @@ def decode_session_token(token: str, secret: str) -> AuthContext:
             college_id=UUID(str(payload["college_id"])) if payload.get("college_id") else None,
             stage_id=UUID(str(payload["stage_id"])) if payload.get("stage_id") else None,
             stage_name=str(payload["stage_name"]) if payload.get("stage_name") else None,
+            stage_type=str(payload["stage_type"]) if payload.get("stage_type") else None,
             available_roles=tuple(str(role) for role in payload.get("roles", []) if role),
         )
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:

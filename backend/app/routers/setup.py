@@ -188,19 +188,31 @@ async def bootstrap_session(
                 json.dumps(payload.config.model_dump()),
             )
             await connection.execute("INSERT INTO game_event_counters (session_id) VALUES ($1)", session_id)
-            stage_id = await connection.fetchval(
-                """
-                INSERT INTO activity_stages (
-                  session_id, name, stage_type, sort_order, start_offset_ms,
-                  duration_minutes, config
-                )
-                VALUES ($1, '活米村', 'magic_village', 1, 0, $2, $3::jsonb)
-                RETURNING id
-                """,
-                session_id,
-                payload.config.rules.period_count * payload.config.rules.period_duration_minutes,
-                json.dumps({"legacy_period_count": payload.config.rules.period_count}),
+            village_duration = payload.config.rules.period_count * payload.config.rules.period_duration_minutes
+            default_stages = (
+                ("破冰", "icebreaker", 1, 0, 30, {}),
+                ("純計分", "score_only", 2, 30 * 60_000, 45, {}),
+                ("活米村", "magic_village", 3, 75 * 60_000, village_duration, {"legacy_period_count": payload.config.rules.period_count}),
             )
+            stage_ids: list[UUID] = []
+            for name, stage_type, sort_order, start_offset_ms, duration_minutes, config in default_stages:
+                stage_ids.append(await connection.fetchval(
+                    """
+                    INSERT INTO activity_stages (
+                      session_id, name, stage_type, sort_order, start_offset_ms,
+                      duration_minutes, config
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+                    RETURNING id
+                    """,
+                    session_id,
+                    name,
+                    stage_type,
+                    sort_order,
+                    start_offset_ms,
+                    duration_minutes,
+                    json.dumps(config),
+                ))
             coordinator_id = await connection.fetchval(
                 """
                 INSERT INTO participants (session_id, participant_no, display_name, email)
@@ -212,15 +224,16 @@ async def bootstrap_session(
             )
             if coordinator_id is None:
                 raise HTTPException(status_code=500, detail={"code": "BOOTSTRAP_FAILED", "message": "無法建立總召身分。"})
-            await connection.execute(
-                """
-                INSERT INTO stage_role_assignments (session_id, stage_id, participant_id, role, scope_type)
-                VALUES ($1, $2, $3, 'coordinator', 'session')
-                """,
-                session_id,
-                stage_id,
-                coordinator_id,
-            )
+            for stage_id in stage_ids:
+                await connection.execute(
+                    """
+                    INSERT INTO stage_role_assignments (session_id, stage_id, participant_id, role, scope_type)
+                    VALUES ($1, $2, $3, 'coordinator', 'session')
+                    """,
+                    session_id,
+                    stage_id,
+                    coordinator_id,
+                )
 
             team_ids: list[UUID] = []
             for number, team in enumerate(payload.teams, start=1):

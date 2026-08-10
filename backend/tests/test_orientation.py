@@ -78,10 +78,11 @@ class GoogleIdentityTest(TestCase):
 
 class AuthTokenTest(TestCase):
     def test_google_session_token_preserves_stage_roles(self):
-        context = AuthContext(access_id=uuid4(), session_id=uuid4(), role="score_keeper", participant_id=uuid4(), available_roles=("score_keeper", "participant"))
+        context = AuthContext(access_id=uuid4(), session_id=uuid4(), role="score_keeper", participant_id=uuid4(), stage_type="score_only", available_roles=("score_keeper", "participant"))
         token = create_session_token(context, "test-secret", 60)
         restored = decode_session_token(token, "test-secret")
         self.assertEqual(restored.available_roles, ("score_keeper", "participant"))
+        self.assertEqual(restored.stage_type, "score_only")
 
     def test_legacy_token_is_rejected_by_api_authentication(self):
         context = AuthContext(access_id=uuid4(), session_id=uuid4(), role="coordinator")

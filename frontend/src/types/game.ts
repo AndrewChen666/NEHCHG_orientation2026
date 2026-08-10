@@ -52,6 +52,7 @@ export interface AccessIdentity {
   college_id?: string | null
   stage_id?: string | null
   stage_name?: string | null
+  stage_type?: ActivityStageType | null
   available_roles?: Role[]
 }
 

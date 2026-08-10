@@ -49,6 +49,7 @@ import { useRouter } from 'vue-router'
 import Icon from '@/components/Icon.vue'
 import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/session'
+import type { AccessIdentity } from '@/types/game'
 
 const router = useRouter()
 const { signInGoogle } = useSession()
@@ -58,11 +59,12 @@ const googleButton = ref<HTMLElement | null>(null)
 const googleReady = ref(false)
 let googleScript: HTMLScriptElement | null = null
 
-function destinationForRole(role: string) {
-  if (role === 'coordinator') return '/admin'
-  if (role === 'magic_boss') return '/boss'
-  if (role === 'market_master') return '/master'
-  if (role === 'team_facilitator') return '/user'
+function destinationForIdentity(identity: Pick<AccessIdentity, 'role' | 'stage_type'>) {
+  if (identity.role === 'coordinator') return '/admin'
+  if (identity.stage_type !== 'magic_village') return '/activity'
+  if (identity.role === 'magic_boss') return '/boss'
+  if (identity.role === 'market_master') return '/master'
+  if (identity.role === 'team_facilitator') return '/user'
   return '/activity'
 }
 
@@ -75,7 +77,7 @@ async function handleGoogleCredential(response: { credential?: string }) {
   errorMessage.value = ''
   try {
     const identity = await signInGoogle(response.credential)
-    await router.push(destinationForRole(identity.role))
+    await router.push(destinationForIdentity(identity))
   } catch (error) {
     errorMessage.value = error instanceof ApiError ? error.message : '目前無法連線，請稍後再試。'
   } finally {

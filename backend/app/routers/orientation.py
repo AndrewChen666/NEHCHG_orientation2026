@@ -452,6 +452,20 @@ async def replace_stages(
                         item.team_multiplier, item.college_multiplier, stage_id, session_id,
                     )
                 stage_ids.append(stage_id)
+            # The coordinator is the one role that must survive a stage reorder
+            # or the creation of a new stage; otherwise the next login may be
+            # downgraded to the generic participant role on the first stage.
+            await connection.execute(
+                """
+                INSERT INTO stage_role_assignments (session_id, stage_id, participant_id, role, scope_type)
+                SELECT $1, s.id, p.id, 'coordinator', 'session'
+                FROM activity_stages s
+                JOIN participants p ON p.session_id = s.session_id AND p.participant_no = 'COORDINATOR'
+                WHERE s.session_id = $1
+                ON CONFLICT (stage_id, participant_id, role, scope_type, scope_id) DO NOTHING
+                """,
+                session_id,
+            )
             await connection.execute(
                 "INSERT INTO audit_logs (session_id, actor_id, action, payload) VALUES ($1, $2, 'stages.replace', $3::jsonb)",
                 session_id,
@@ -540,6 +554,19 @@ async def replace_role_assignments(
                     assignment.market_id,
                     assignment.active,
                 )
+            # The coordinator assignment is system-owned and cannot disappear
+            # when the editable assignment list is replaced from the UI.
+            await connection.execute(
+                """
+                INSERT INTO stage_role_assignments (session_id, stage_id, participant_id, role, scope_type)
+                SELECT $1, s.id, p.id, 'coordinator', 'session'
+                FROM activity_stages s
+                JOIN participants p ON p.session_id = s.session_id AND p.participant_no = 'COORDINATOR'
+                WHERE s.session_id = $1
+                ON CONFLICT (stage_id, participant_id, role, scope_type, scope_id) DO NOTHING
+                """,
+                session_id,
+            )
             await connection.execute(
                 "INSERT INTO audit_logs (session_id, actor_id, action, payload) VALUES ($1, $2, 'role_assignments.replace', $3::jsonb)",
                 session_id,

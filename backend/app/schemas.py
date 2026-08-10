@@ -17,6 +17,7 @@ class SessionAccess(BaseModel):
     college_id: UUID | None = None
     stage_id: UUID | None = None
     stage_name: str | None = None
+    stage_type: str | None = None
     available_roles: list[str] = Field(default_factory=list)
 
 

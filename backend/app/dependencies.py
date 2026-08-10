@@ -141,5 +141,6 @@ async def _refresh_google_context(pool, context: AuthContext) -> AuthContext | N
         college_id=selected["participant_college_id"],
         stage_id=stage["id"],
         stage_name=stage["name"],
+        stage_type=stage["stage_type"],
         available_roles=roles,
     )
