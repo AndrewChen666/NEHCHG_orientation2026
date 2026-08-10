@@ -22,36 +22,32 @@
       <div class="login-panel__inner">
         <div class="mobile-brand"><img class="brand-mark" src="/icon.png" alt="" aria-hidden="true" /><strong>NEHCHG MSTC</strong></div>
         <h2>活動工作台登入</h2>
-        <p class="login-lead">輸入總召提供的場次識別與密碼，進入你的角色工作區。</p>
+        <p class="login-lead">輸入活動場次識別，再使用已登記的 Google 帳號進入目前階段。</p>
 
-        <form class="login-form" @submit.prevent="handleSubmit">
+        <form class="login-form" @submit.prevent="handleGoogleLogin">
           <label>
             <span>場次識別</span>
-            <input v-model="sessionId" type="text" placeholder="例如：2026-orientation" autocomplete="off" required />
-          </label>
-          <label>
-            <span>登入密碼</span>
-            <input v-model="accessCode" type="password" placeholder="輸入總召提供的登入密碼" autocomplete="current-password" required />
+            <input v-model="sessionId" type="text" placeholder="貼上場次 UUID" autocomplete="off" required />
           </label>
           <p v-if="errorMessage" class="form-error"><Icon name="alert" size="sm" />{{ errorMessage }}</p>
-          <button class="action-button login-submit" :class="{ 'is-loading': loading }" type="submit" :disabled="loading" :aria-busy="loading">
-            <span>{{ loading ? '正在核對通行資訊...' : '進入遊戲' }}</span>
-            <Icon name="arrow" size="sm" />
-          </button>
+          <div class="google-login-shell">
+            <div v-if="loading" class="google-login-loading">正在驗證 Google 身分…</div>
+            <div v-show="!loading" id="google-login-button" ref="googleButton" aria-label="使用 Google 登入"></div>
+          </div>
         </form>
 
         <div class="login-help">
           <Icon name="spark" size="sm" />
-          <span>現場遇到問題？請向總召確認你的登入資訊。</span>
+          <span>找不到活動身分？請向總召確認 email 已加入本場次名單。</span>
         </div>
-        <p class="demo-note">尚未連接伺服器時，可直接使用 `/admin`、`/boss`、`/master` 或 `/user` 預覽角色介面。</p>
+        <p class="demo-note">Google 登入只會傳送短期身分憑證，系統不保存 Google 密碼。</p>
       </div>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import Icon from '@/components/Icon.vue'
@@ -59,24 +55,76 @@ import { ApiError } from '@/lib/api'
 import { useSession } from '@/lib/session'
 
 const router = useRouter()
-const { signIn } = useSession()
+const { signInGoogle } = useSession()
 const sessionId = ref('')
-const accessCode = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
+const googleButton = ref<HTMLElement | null>(null)
+const googleReady = ref(false)
+let googleScript: HTMLScriptElement | null = null
 
-async function handleSubmit() {
+function destinationForRole(role: string) {
+  if (role === 'coordinator') return '/admin'
+  if (role === 'magic_boss') return '/boss'
+  if (role === 'market_master') return '/master'
+  if (role === 'team_facilitator') return '/user'
+  return '/activity'
+}
+
+async function handleGoogleCredential(response: { credential?: string }) {
+  if (!sessionId.value.trim()) {
+    errorMessage.value = '請先輸入活動場次 UUID。'
+    return
+  }
+  if (!response.credential) {
+    errorMessage.value = 'Google 沒有回傳有效身分，請再試一次。'
+    return
+  }
   loading.value = true
   errorMessage.value = ''
   try {
-    const identity = await signIn(sessionId.value.trim(), accessCode.value)
-    await router.push(identity.role === 'coordinator' ? '/admin' : identity.role === 'magic_boss' ? '/boss' : identity.role === 'market_master' ? '/master' : '/user')
+    const identity = await signInGoogle(sessionId.value.trim(), response.credential)
+    await router.push(destinationForRole(identity.role))
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : '目前無法連線，請確認場次識別或稍後再試。'
+    errorMessage.value = error instanceof ApiError ? error.message : '目前無法連線，請確認場次 UUID 或稍後再試。'
   } finally {
     loading.value = false
   }
 }
+
+function handleGoogleLogin() {
+  if (!googleReady.value) errorMessage.value = 'Google 登入元件尚未載入，請稍候再試。'
+}
+
+function renderGoogleButton() {
+  const google = (window as typeof window & { google?: any }).google
+  if (!google?.accounts?.id || !googleButton.value) return
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  if (!clientId) {
+    errorMessage.value = '前端尚未設定 Google Client ID。'
+    return
+  }
+  google.accounts.id.initialize({ client_id: clientId, callback: handleGoogleCredential, ux_mode: 'popup' })
+  google.accounts.id.renderButton(googleButton.value, { theme: 'outline', size: 'large', width: 360, text: 'signin_with', shape: 'rectangular' })
+  googleReady.value = true
+}
+
+onMounted(() => {
+  if ((window as typeof window & { google?: any }).google) {
+    renderGoogleButton()
+    return
+  }
+  googleScript = document.createElement('script')
+  googleScript.src = 'https://accounts.google.com/gsi/client'
+  googleScript.async = true
+  googleScript.defer = true
+  googleScript.onload = renderGoogleButton
+  document.head.appendChild(googleScript)
+})
+
+onBeforeUnmount(() => {
+  googleScript?.remove()
+})
 </script>
 
 <style scoped>
@@ -126,6 +174,10 @@ async function handleSubmit() {
 .login-submit { width: 100%; min-height: 49px; justify-content: space-between; margin-top: 4px; padding-inline: 18px; color: var(--login-bg); background: var(--login-accent); border-color: var(--login-accent); border-radius: 0; }
 .login-submit:hover { color: var(--login-bg); background: oklch(.85 .13 80); }
 .login-submit:disabled { cursor: wait; opacity: .65; }
+.google-login-shell { display: grid; min-height: 44px; place-items: center; }
+.google-login-shell > div { width: 100%; }
+.google-login-shell :deep(iframe) { max-width: 100%; }
+.google-login-loading { color: var(--login-muted); font-size: 12px; text-align: center; }
 .login-help { display: flex; gap: 9px; margin-top: 30px; padding-top: 20px; color: var(--login-muted); border-top: 1px solid oklch(.78 .14 80 / .22); font-size: 11px; line-height: 1.6; }
 .login-help .icon { flex: 0 0 auto; color: var(--login-accent); }
 .demo-note { margin-top: 24px; color: oklch(.62 .03 255); font-size: 10px; line-height: 1.6; }

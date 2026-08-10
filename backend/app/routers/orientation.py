@@ -148,7 +148,8 @@ async def _stage_for_context(pool: Pool, stage_id: UUID, context: AuthContext, r
     if stage is None or stage["session_id"] != context.session_id:
         _error(404, "STAGE_NOT_FOUND", "找不到這個活動階段。")
     current = await get_current_stage(pool, context.session_id)
-    if require_current and context.role != "coordinator" and not stage_is_current(stage, current):
+    active_roles = set(context.available_roles or (context.role,))
+    if require_current and "coordinator" not in active_roles and not stage_is_current(stage, current):
         _error(409, "STAGE_NOT_ACTIVE", "目前不是這個活動階段。")
     return stage
 
@@ -473,6 +474,12 @@ async def set_active_stage(
         if stage is None or stage["session_id"] != session_id:
             _error(404, "STAGE_NOT_FOUND", "找不到要切換的活動階段。")
     await pool.execute("UPDATE game_sessions SET manual_stage_id = $1, updated_at = NOW() WHERE id = $2", payload.stage_id, session_id)
+    await pool.execute(
+        "INSERT INTO audit_logs (session_id, actor_id, action, payload) VALUES ($1, $2, 'stage.manual_switch', $3::jsonb)",
+        session_id,
+        context.access_id,
+        json.dumps({"stage_id": str(payload.stage_id) if payload.stage_id else None}),
+    )
     return {"stage_id": payload.stage_id}
 
 
@@ -544,7 +551,8 @@ async def replace_role_assignments(
 
 async def _assert_activity_operator(pool: Pool, stage_id: UUID, context: AuthContext):
     stage = await _stage_for_context(pool, stage_id, context)
-    if context.role not in {"coordinator", "icebreaker_facilitator", "team_facilitator"}:
+    active_roles = set(context.available_roles or (context.role,))
+    if not active_roles.intersection({"coordinator", "icebreaker_facilitator", "team_facilitator"}):
         _error(403, "ICEBREAKER_ROLE_REQUIRED", "只有隊輔或總召可以記錄破冰分圈。")
     if stage["stage_type"] != "icebreaker":
         _error(409, "STAGE_TYPE_INVALID", "目前階段不是破冰活動。")
@@ -712,10 +720,11 @@ async def icebreaker_recommendations(
 
 
 def _target_is_allowed(context: AuthContext, target_type: str, target: object) -> bool:
-    if context.role in {"coordinator", "score_keeper"}:
-        if context.role == "coordinator" or context.team_id is None and context.college_id is None:
+    active_roles = set(context.available_roles or (context.role,))
+    if "coordinator" in active_roles or "score_keeper" in active_roles:
+        if "coordinator" in active_roles or context.team_id is None and context.college_id is None:
             return True
-    if context.role == "team_facilitator" or context.role == "score_keeper":
+    if "team_facilitator" in active_roles or "score_keeper" in active_roles:
         if target_type == "personal":
             return target["team_id"] == context.team_id
         if target_type == "team":
@@ -746,9 +755,10 @@ async def record_score(
     broker: EventBroker = Depends(get_event_broker),
 ) -> dict[str, object]:
     stage = await _stage_for_context(pool, stage_id, context)
-    if context.role not in {"coordinator", "score_keeper", "team_facilitator"}:
+    active_roles = set(context.available_roles or (context.role,))
+    if not active_roles.intersection({"coordinator", "score_keeper", "team_facilitator"}):
         _error(403, "SCORE_ROLE_REQUIRED", "目前身分不能記錄分數。")
-    if stage["stage_type"] not in {"score_only", "mini_game", "custom", "icebreaker"} and context.role != "coordinator":
+    if stage["stage_type"] not in {"score_only", "mini_game", "custom", "icebreaker"} and "coordinator" not in active_roles:
         _error(409, "SCORING_NOT_AVAILABLE", "目前階段未開放現場計分。")
     async with pool.acquire() as connection:
         async with connection.transaction():

@@ -14,7 +14,7 @@ async def get_auth_context(
     pool=Depends(get_pool),
 ) -> AuthContext:
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail={"code": "AUTH_REQUIRED", "message": "請先使用角色代碼登入。"})
+        raise HTTPException(status_code=401, detail={"code": "AUTH_REQUIRED", "message": "請先使用 Google 登入。"})
     try:
         context = decode_session_token(authorization.removeprefix("Bearer ").strip(), settings.session_secret)
         if context.participant_id is not None:
@@ -24,12 +24,13 @@ async def get_auth_context(
             return refreshed
         return context
     except ValueError as exc:
-        raise HTTPException(status_code=401, detail={"code": "AUTH_INVALID", "message": "登入已失效，請重新輸入代碼。"}) from exc
+        raise HTTPException(status_code=401, detail={"code": "AUTH_INVALID", "message": "登入已失效，請重新使用 Google 登入。"}) from exc
 
 
 def require_roles(*allowed_roles: str) -> Callable[..., Awaitable[AuthContext]]:
     async def dependency(context: AuthContext = Depends(get_auth_context)) -> AuthContext:
-        if context.role not in allowed_roles:
+        active_roles = set(context.available_roles or (context.role,))
+        if not active_roles.intersection(allowed_roles):
             raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "目前身分沒有此操作權限。"})
         return context
 
@@ -56,7 +57,7 @@ async def _refresh_google_context(pool, context: AuthContext) -> AuthContext | N
         """
         SELECT a.role, a.team_id, a.market_id, a.college_id, a.id AS assignment_id,
                p.id AS participant_id, p.participant_no, p.display_name,
-               p.college_id AS participant_college_id
+               p.college_id AS participant_college_id, p.team_id AS participant_team_id
         FROM stage_role_assignments a
         JOIN participants p ON p.id = a.participant_id
         WHERE a.stage_id = $1 AND a.participant_id = $2 AND a.active = TRUE
@@ -67,7 +68,35 @@ async def _refresh_google_context(pool, context: AuthContext) -> AuthContext | N
         context.role,
     )
     if not rows:
-        return None
+        participant = await pool.fetchrow(
+            "SELECT id, participant_no, display_name, college_id, team_id FROM participants WHERE id = $1 AND session_id = $2 AND active = TRUE",
+            context.participant_id,
+            context.session_id,
+        )
+        if participant is None:
+            return None
+        fallback_role = "coordinator" if context.role == "coordinator" or participant["participant_no"] == "COORDINATOR" else "participant"
+        await pool.execute(
+            "INSERT INTO stage_role_assignments (session_id, stage_id, participant_id, role, scope_type) VALUES ($1, $2, $3, $4, 'session')",
+            context.session_id,
+            stage["id"],
+            participant["id"],
+            fallback_role,
+        )
+        rows = await pool.fetch(
+            """
+            SELECT a.role, a.team_id, a.market_id, a.college_id, a.id AS assignment_id,
+                   p.id AS participant_id, p.participant_no, p.display_name,
+                   p.college_id AS participant_college_id, p.team_id AS participant_team_id
+            FROM stage_role_assignments a JOIN participants p ON p.id = a.participant_id
+            WHERE a.stage_id = $1 AND a.participant_id = $2 AND a.active = TRUE
+            ORDER BY a.id
+            """,
+            stage["id"],
+            context.participant_id,
+        )
+        if not rows:
+            return None
     selected = rows[0]
     roles = tuple(dict.fromkeys(str(row["role"]) for row in rows))
     actor = await pool.fetchrow(
@@ -83,12 +112,28 @@ async def _refresh_google_context(pool, context: AuthContext) -> AuthContext | N
         selected["assignment_id"],
     )
     if actor is None:
-        return None
+        actor_id = await pool.fetchval(
+            """
+            INSERT INTO access_codes (session_id, role, display_name, team_id, market_id, code_hash, participant_id, stage_id, role_assignment_id)
+            VALUES ($1, $2, $3, $4, $5, 'google-only', $6, $7, $8)
+            RETURNING id
+            """,
+            context.session_id,
+            selected["role"],
+            f"{selected['participant_no']}・{selected['display_name']}",
+            selected["team_id"],
+            selected["market_id"],
+            selected["participant_id"],
+            stage["id"],
+            selected["assignment_id"],
+        )
+    else:
+        actor_id = actor["id"]
     return AuthContext(
-        access_id=actor["id"],
+        access_id=actor_id,
         session_id=context.session_id,
         role=selected["role"],
-        team_id=selected["team_id"],
+        team_id=selected["team_id"] or selected["participant_team_id"],
         market_id=selected["market_id"],
         display_name=selected["display_name"],
         participant_id=selected["participant_id"],

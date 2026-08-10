@@ -1,4 +1,4 @@
-export type Role = 'coordinator' | 'magic_boss' | 'market_master' | 'team_facilitator'
+export type Role = 'coordinator' | 'participant' | 'team_facilitator' | 'icebreaker_facilitator' | 'score_keeper' | 'market_master' | 'magic_boss'
 export type SessionStatus = 'draft' | 'scheduled' | 'running' | 'paused' | 'finished'
 /** Per-session product identifiers are editable, so this is intentionally not a fixed union. */
 export type ResourceKey = string
@@ -47,15 +47,12 @@ export interface AccessIdentity {
   team_id?: string | null
   market_id?: string | null
   display_name?: string | null
-}
-
-export interface AccessCodeSummary {
-  access_id: string
-  role: Role
-  display_name: string
-  team_id?: string | null
-  market_id?: string | null
-  active: boolean
+  participant_id?: string | null
+  participant_no?: string | null
+  college_id?: string | null
+  stage_id?: string | null
+  stage_name?: string | null
+  available_roles?: Role[]
 }
 
 export interface SessionSummary {
@@ -104,6 +101,85 @@ export interface GameSnapshot {
   teams: TeamSummary[]
   markets: MarketSummary[]
   last_event_sequence: number
+  current_stage?: ActivityStage | null
+  active_roles?: Role[]
+}
+
+export type ActivityStageType = 'icebreaker' | 'score_only' | 'mini_game' | 'magic_village' | 'custom'
+
+export interface ActivityStage {
+  id: string
+  session_id?: string
+  name: string
+  stage_type: ActivityStageType
+  sort_order: number
+  start_offset_ms: number
+  duration_minutes: number
+  config: Record<string, unknown>
+  personal_multiplier: number
+  team_multiplier: number
+  college_multiplier: number
+}
+
+export interface ActivitySnapshot {
+  current_stage: ActivityStage | null
+  effective_elapsed_ms: number
+  stages: ActivityStage[]
+  active_roles: Role[]
+  role: Role
+}
+
+export interface ParticipantRecord {
+  id: string
+  participant_no: string
+  display_name: string
+  email: string
+  google_subject: boolean
+  college_id?: string | null
+  college_code?: string | null
+  college_name?: string | null
+  team_id?: string | null
+  team_number?: number | null
+  team_name?: string | null
+  active: boolean
+}
+
+export interface RoleAssignmentRecord {
+  id?: string
+  stage_id: string
+  stage_name?: string
+  participant_id: string
+  participant_no?: string
+  display_name?: string
+  role: Role
+  scope_type: 'session' | 'college' | 'team' | 'market'
+  college_id?: string | null
+  team_id?: string | null
+  market_id?: string | null
+  active: boolean
+}
+
+export interface ScoreTargets {
+  personal: ParticipantRecord[]
+  team: Array<{ id: string; number: number; name: string }>
+  college: Array<{ id: string; code: string; name: string }>
+}
+
+export interface LeaderboardEntry {
+  target_id: string
+  name: string
+  participant_no?: string
+  number?: number
+  code?: string
+  raw_points: number
+  weighted_points: number
+}
+
+export interface Leaderboards {
+  stage_id?: string | null
+  personal: LeaderboardEntry[]
+  team: LeaderboardEntry[]
+  college: LeaderboardEntry[]
 }
 
 export interface GameEvent {

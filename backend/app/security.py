@@ -1,8 +1,6 @@
 import base64
-import hashlib
 import hmac
 import json
-import secrets
 import time
 from dataclasses import dataclass
 from uuid import UUID
@@ -22,23 +20,6 @@ class AuthContext:
     stage_id: UUID | None = None
     stage_name: str | None = None
     available_roles: tuple[str, ...] = ()
-
-
-def hash_access_code(code: str, salt: str | None = None) -> str:
-    actual_salt = salt or secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac("sha256", code.encode(), actual_salt.encode(), 120_000).hex()
-    return f"pbkdf2_sha256${actual_salt}${digest}"
-
-
-def verify_access_code(code: str, encoded: str) -> bool:
-    try:
-        algorithm, salt, expected = encoded.split("$", 2)
-    except ValueError:
-        return False
-    if algorithm != "pbkdf2_sha256":
-        return False
-    actual = hashlib.pbkdf2_hmac("sha256", code.encode(), salt.encode(), 120_000).hex()
-    return hmac.compare_digest(actual, expected)
 
 
 def _encode_part(value: dict[str, object]) -> str:

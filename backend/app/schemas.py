@@ -5,11 +5,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class CodeLoginRequest(BaseModel):
-    session_id: UUID
-    access_code: str = Field(min_length=4, max_length=64)
-
-
 class SessionAccess(BaseModel):
     access_id: UUID
     session_id: UUID

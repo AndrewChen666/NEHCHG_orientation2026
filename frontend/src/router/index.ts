@@ -5,6 +5,8 @@ import BOSS from '../pages/boss.vue'
 import USER from '../pages/user.vue'
 import LOGIN from '../pages/login.vue'
 import SETUP from '../pages/setup.vue'
+import ACTIVITY_SETUP from '../pages/activity-setup.vue'
+import ACTIVITY from '../pages/activity.vue'
 import ADMIN_MAP from '../pages/admin-map.vue'
 import HOME from '../pages/HomePage.vue'
 
@@ -27,6 +29,11 @@ const router = createRouter({
     name: 'login',
     component: LOGIN,
   }, {
+    path: '/admin/activity',
+    name: 'admin-activity',
+    component: ACTIVITY_SETUP,
+    meta: { requiresAuth: true, coordinatorOnly: true },
+  }, {
     path: '/admin/setup',
     name: 'admin-setup',
     component: SETUP,
@@ -46,6 +53,11 @@ const router = createRouter({
     path: '/admin/map',
     name: 'admin-map',
     component: ADMIN_MAP,
+  }, {
+    path: '/activity',
+    name: 'activity',
+    component: ACTIVITY,
+    meta: { requiresAuth: true },
   },{
     path: '/boss',
     name: 'boss',
@@ -61,6 +73,21 @@ const router = createRouter({
     component: USER,
     alias: ['/user/map'],
   }],
+})
+
+router.beforeEach((to) => {
+  if (!to.meta.requiresAuth) return true
+  const token = localStorage.getItem('active-magic-village-token')
+  if (!token) return { name: 'login', query: { redirect: to.fullPath } }
+  if (to.meta.coordinatorOnly) {
+    try {
+      const identity = JSON.parse(localStorage.getItem('active-magic-village-identity') || 'null') as { role?: string } | null
+      if (identity?.role !== 'coordinator') return { name: 'activity' }
+    } catch {
+      return { name: 'login', query: { redirect: to.fullPath } }
+    }
+  }
+  return true
 })
 
 export default router

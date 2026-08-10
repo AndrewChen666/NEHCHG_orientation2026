@@ -64,7 +64,7 @@ import Icon from '@/components/Icon.vue'
 const router = useRouter()
 const { state } = useSession()
 const isDemo = computed(() => !state.token || state.identity?.role !== 'coordinator')
-const navItems = [{ to: '/admin', label: '總覽', icon: 'dashboard' }, { to: '/admin/setup', label: '開局設定', icon: 'spark' }, { to: '/admin/markets', label: '市場與行情', icon: 'market' }, { to: '/admin/teams', label: '隊伍資產', icon: 'team' }, { to: '/admin/map', label: '地圖與佔領', icon: 'map' }]
+const navItems = [{ to: '/admin', label: '總覽', icon: 'dashboard' }, { to: '/admin/activity', label: '活動流程', icon: 'clock' }, { to: '/admin/setup', label: '開局設定', icon: 'spark' }, { to: '/admin/markets', label: '市場與行情', icon: 'market' }, { to: '/admin/teams', label: '隊伍資產', icon: 'team' }, { to: '/admin/map', label: '地圖與佔領', icon: 'map' }]
 const teams = [
   { number: 7, name: '7', note: '剛完成一筆交易', money: 218, ratio: 100, status: '領先中', statusClass: 'is-success' },
   { number: 3, name: '3', note: '持有 2 個據點', money: 196, ratio: 90, status: '持有據點', statusClass: 'is-warning' },
@@ -73,7 +73,7 @@ const teams = [
 ]
 const events = [{ icon: 'market', title: '小隊 7 完成交易', detail: '在 A 市場買入資源 A × 1', time: '剛剛', tone: 'trade' }, { icon: 'spark', title: '小隊 3 佔領成功', detail: 'B 市場開始計算收益', time: '1 分鐘前', tone: 'capture' }, { icon: 'alert', title: '有 3 個現場事件待處理', detail: '請提醒對應角色處理', time: '3 分鐘前', tone: 'alert' }]
 const markets = [{ code: 'A', name: 'A', owner: '小隊 7' }, { code: 'B', name: 'B', owner: '小隊 3' }, { code: 'C', name: 'C', owner: '開放中' }]
-const quickActions = [{ icon: 'spark', label: '開局設定', detail: '隊伍、資產與市場位置', to: '/admin/setup' }, { icon: 'market', label: '編輯行情', detail: '管理公開與隱藏價格', to: '/admin/markets' }]
+const quickActions = [{ icon: 'clock', label: '活動流程', detail: '階段、倍率與現場身分', to: '/admin/activity' }, { icon: 'spark', label: '開局設定', detail: '隊伍、資產與市場位置', to: '/admin/setup' }, { icon: 'market', label: '編輯行情', detail: '管理公開與隱藏價格', to: '/admin/markets' }]
 const goLogin = () => router.push('/login')
 
 </script>

@@ -19,7 +19,7 @@
 
     <div class="setup-lock">
       <Icon name="alert" size="sm" />
-      <span v-if="isDemo">目前是展示資料。使用總召代碼登入後，才會讀取並寫入 Supabase 的實際場次設定。</span>
+      <span v-if="isDemo">目前是展示資料。使用已匯入白名單的 Google 帳號登入後，才會讀取並寫入實際場次設定。</span>
       <span v-else>場次狀態：<strong>{{ statusLabel }}</strong>。只有 draft／scheduled 可以修改開局資產；遊戲開始後所有設定會鎖定。</span>
     </div>
 
@@ -60,29 +60,13 @@
         <div class="rule-group"><div class="rule-group__title"><Icon name="spark" size="sm" /><strong>隱藏魔王</strong></div><div class="form-grid"><label class="form-field"><span>開放時段</span><input v-model.number="setup.config.rules.magic_start_period" type="number" min="1" max="4" /></label><div class="reward-editor"><span class="form-label">各難度獎勵（金幣）</span><div class="reward-editor__grid"><label v-for="(reward, index) in setup.config.rules.magic_reward_by_difficulty" :key="index" class="form-field"><span>{{ roman(index + 1) }}</span><input v-model.number="setup.config.rules.magic_reward_by_difficulty[index]" type="number" min="0" max="1000" /></label></div></div></div></div>
         <div class="rule-group"><div class="rule-group__title"><Icon name="wallet" size="sm" /><strong>黑心商人與現場確認</strong></div><div class="form-grid two-up"><label class="form-field"><span>開放時段</span><input v-model.number="setup.config.rules.black_market_start_period" type="number" min="1" max="4" /></label><label class="form-field"><span>抽卡費用</span><input v-model.number="setup.config.rules.black_market_draw_cost" type="number" min="0" max="100000" /></label><label class="check-field"><input v-model="setup.config.rules.guard_money_pouch" type="checkbox" /><span>交易／挑戰需出示金錢袋</span></label><label class="check-field"><input v-model="setup.config.rules.guard_minimum_team_present" type="checkbox" /><span>交易／挑戰需半數隊員在場</span></label></div></div>
       </div>
-      <div class="notice config-editor__notice"><Icon name="alert" size="sm" /><span>為避免現場規則互相矛盾，時段數目前最多 4 段；商品交易識別碼、名稱、簡稱、單位與行情都可自由調整。</span></div>
+      <div class="notice config-editor__notice"><Icon name="alert" size="sm" /><span>活米村內部仍保留最多 4 個遊戲時段；完整活動流程請到「活動流程」設定破冰、計分與活米村階段。</span></div>
     </section>
 
     <section v-if="activeSetupTab === 'session'" class="section-block">
       <div class="section-block__head"><div><h2>場次資訊</h2><p>由 bootstrap 建立；這裡先確認目前場次狀態</p></div><span class="status-badge" :class="setup.session.status === 'draft' ? 'is-neutral' : 'is-warning'">{{ statusLabel }}</span></div>
       <div class="form-grid two-up"><label class="form-field"><span>場次名稱</span><input :value="setup.session.name" type="text" readonly /></label><label class="form-field"><span>預定開始</span><input :value="formattedSchedule" type="text" readonly placeholder="手動開始" /></label></div>
     </section>
-
-      <section v-if="activeSetupTab === 'session'" class="section-block access-password-section">
-        <div class="section-block__head">
-          <div><h2>登入密碼管理</h2><p>總召可以替魔王、關主與隊輔設定登入密碼；總召密碼維持場次建立時的預設密碼。留白代表不修改，既有密碼不會回顯。</p></div>
-          <div class="access-password-section__badges"><span class="status-badge is-neutral">總召專用</span><span class="status-badge is-warning">敏感資訊</span></div>
-        </div>
-
-        <div class="notice access-password-notice"><Icon name="alert" size="sm" /><span v-if="isDemo">目前是展示資料。使用總召登入後，才可設定實際場次的登入密碼。</span><span v-else>密碼只保存於伺服器的雜湊值；儲存或輪替後原密碼立即失效。</span></div>
-
-        <div class="password-management-subhead"><div><h3>隱藏魔王密碼</h3><p>輪替後舊密碼會立即失效；新密碼只在這次操作後顯示，請交給現場魔王。</p></div><span class="status-badge is-warning">一次性顯示</span></div>
-        <div class="role-code-row"><div class="notice"><Icon name="spark" size="sm" /><span v-if="magicBossCode">本次魔王密碼：<strong class="one-time-code">{{ magicBossCode }}</strong></span><span v-else>尚未在這裡顯示魔王密碼。</span></div><button class="ghost-button" :class="{ 'is-loading': rotatingCode }" type="button" :disabled="rotatingCode || isDemo" :aria-busy="rotatingCode" @click="rotateBossCode">{{ rotatingCode ? '產生中…' : '輪替並顯示新密碼' }}</button></div>
-
-        <div class="password-management-divider" aria-hidden="true"></div>
-        <div class="password-management-subhead"><div><h3>現場身分密碼</h3><p>只會更新有輸入新密碼的身分；總召密碼不在此處修改。</p></div><span class="mini-label">共 {{ accessCodes.length }} 個可設定身分</span></div>
-        <div class="access-password-list"><article v-for="accessCode in accessCodes" :key="accessCode.access_id" class="access-password-item"><div class="access-password-item__identity"><span class="status-badge is-neutral">{{ roleLabel(accessCode.role) }}</span><strong>{{ accessCode.display_name }}</strong></div><label class="form-field access-password-item__field"><span>設定新密碼</span><input v-model="passwordDrafts[accessCode.access_id]" type="password" minlength="4" maxlength="64" autocomplete="new-password" placeholder="至少 4 個字元" :disabled="isDemo || passwordSaving" /></label></article></div><div class="access-password-actions"><span>密碼儲存後，原密碼立即失效。</span><button class="ghost-button" :class="{ 'is-loading': passwordSaving }" type="button" :disabled="passwordSaving || isDemo" :aria-busy="passwordSaving" @click="saveAccessPasswords">{{ passwordSaving ? '儲存中…' : '儲存登入密碼' }}</button></div>
-      </section>
 
     <div class="setup-tab-stack">
       <section v-if="activeSetupTab === 'teams'" class="section-block team-profile-editor">
@@ -156,15 +140,15 @@ import { useRoute, useRouter } from 'vue-router'
 
 import Icon from '@/components/Icon.vue'
 import GameShell from '@/layouts/GameShell.vue'
-import { ApiError, getAccessCodes, getSetup, roleLabel, rotateMagicBossCode, updateAccessCodePasswords, updateConfig, updateMarkets, updateRates, updateTeams } from '@/lib/api'
+import { ApiError, getSetup, updateConfig, updateMarkets, updateRates, updateTeams } from '@/lib/api'
 import { cloneDefaultConfig } from '@/lib/gameConfig'
 import { useSession } from '@/lib/session'
-import type { AccessCodeSummary, ResourceKey, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
+import type { ResourceKey, SetupMarket, SetupRate, SetupSnapshot, SetupTeam } from '@/types/game'
 
 const router = useRouter()
 const route = useRoute()
 const { state } = useSession()
-const navItems = [{ to: '/admin', label: '總覽', icon: 'dashboard' }, { to: '/admin/setup', label: '開局設定', icon: 'spark' }, { to: '/admin/markets', label: '市場與行情', icon: 'market' }, { to: '/admin/teams', label: '隊伍資產', icon: 'team' }, { to: '/admin/map', label: '地圖與佔領', icon: 'map' }]
+const navItems = [{ to: '/admin', label: '總覽', icon: 'dashboard' }, { to: '/admin/activity', label: '活動流程', icon: 'clock' }, { to: '/admin/setup', label: '開局設定', icon: 'spark' }, { to: '/admin/markets', label: '市場與行情', icon: 'market' }, { to: '/admin/teams', label: '隊伍資產', icon: 'team' }, { to: '/admin/map', label: '地圖與佔領', icon: 'map' }]
 type SetupTabId = 'session' | 'products' | 'rules' | 'teams' | 'markets' | 'rates'
 type SetupTab = { id: SetupTabId; label: string; hint: string; icon: string; meta: string }
 
@@ -172,11 +156,6 @@ const setup = reactive<SetupSnapshot>(demoSetup())
 const resources = computed(() => setup.config.products)
 const loading = ref(false)
 const saving = ref(false)
-const rotatingCode = ref(false)
-const magicBossCode = ref('')
-const accessCodes = ref<AccessCodeSummary[]>(demoAccessCodes())
-const passwordDrafts = reactive<Record<string, string>>({})
-const passwordSaving = ref(false)
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
 const selectedMarket = ref('all')
@@ -232,10 +211,8 @@ async function loadSetup() {
   if (isDemo.value || !state.identity || !state.token) return
   loading.value = true
   try {
-    const [nextSetup, nextAccessCodes] = await Promise.all([getSetup(state.identity.session_id, state.token), getAccessCodes(state.identity.session_id, state.token)])
+    const nextSetup = await getSetup(state.identity.session_id, state.token)
     Object.assign(setup, nextSetup)
-    accessCodes.value = nextAccessCodes
-    initializePasswordDrafts()
     ensureAllRateRows()
   } catch (error) {
     showError(error)
@@ -246,7 +223,7 @@ async function loadSetup() {
 
 async function saveSetup() {
   if (isDemo.value || !state.identity || !state.token) {
-    showError(new Error('請使用總召代碼登入後再儲存設定。'))
+    showError(new Error('請使用總召 Google 帳號登入後再儲存設定。'))
     return
   }
   saving.value = true
@@ -266,59 +243,6 @@ async function saveSetup() {
   } finally {
     saving.value = false
   }
-}
-
-async function rotateBossCode() {
-  if (isDemo.value || !state.identity || !state.token) return
-  rotatingCode.value = true
-  try {
-    magicBossCode.value = (await rotateMagicBossCode(state.identity.session_id, state.token)).code
-    accessCodes.value = await getAccessCodes(state.identity.session_id, state.token)
-    initializePasswordDrafts()
-    messageType.value = 'success'
-    message.value = '魔王密碼已輪替，請立即抄錄並交給現場魔王。'
-  } catch (error) {
-    showError(error)
-  } finally {
-    rotatingCode.value = false
-  }
-}
-
-async function saveAccessPasswords() {
-  if (isDemo.value || !state.identity || !state.token) {
-    showError(new Error('請使用總召登入後再設定其他身分的登入密碼。'))
-    return
-  }
-  const passwords = accessCodes.value
-    .map((accessCode) => ({ access_id: accessCode.access_id, password: passwordDrafts[accessCode.access_id] || '' }))
-    .filter((item) => item.password.length > 0)
-  if (!passwords.length) {
-    showError(new Error('請至少輸入一組要更新的登入密碼。'))
-    return
-  }
-  const invalid = passwords.find((item) => item.password.trim().length === 0 || item.password.length < 4)
-  if (invalid) {
-    showError(new Error('登入密碼至少需要 4 個字元，且不可只有空白。'))
-    return
-  }
-  passwordSaving.value = true
-  message.value = ''
-  try {
-    const result = await updateAccessCodePasswords(state.identity.session_id, passwords, state.token)
-    passwords.forEach((item) => { passwordDrafts[item.access_id] = '' })
-    messageType.value = 'success'
-    message.value = `已更新 ${result.updated} 個身分的登入密碼，原密碼已失效。`
-  } catch (error) {
-    showError(error)
-  } finally {
-    passwordSaving.value = false
-  }
-}
-
-function initializePasswordDrafts() {
-  accessCodes.value.forEach((accessCode) => {
-    if (passwordDrafts[accessCode.access_id] === undefined) passwordDrafts[accessCode.access_id] = ''
-  })
 }
 
 function ensureAllRateRows() {
@@ -406,11 +330,6 @@ function demoSetup(): SetupSnapshot {
   return { session: { id: 'demo-session', name: '活米村・Orientation 2026', status: 'draft', scheduled_start: null, current_period: 0 }, config: cloneDefaultConfig(), teams, markets, rates: [] }
 }
 
-function demoAccessCodes(): AccessCodeSummary[] {
-  const markets = Array.from({ length: 8 }, (_, index) => String.fromCharCode(65 + index)).map((code) => ({ access_id: `demo-market-${code}`, role: 'market_master' as const, display_name: `${code} 市場`, market_id: `demo-market-${code}`, team_id: null, active: true }))
-  const teams = Array.from({ length: 8 }, (_, index) => ({ access_id: `demo-team-${index + 1}`, role: 'team_facilitator' as const, display_name: `第 ${index + 1} 隊`, team_id: `demo-team-${index + 1}`, market_id: null, active: true }))
-  return [{ access_id: 'demo-magic-boss', role: 'magic_boss', display_name: '隱藏魔王工作台', team_id: null, market_id: null, active: true }, ...markets, ...teams]
-}
 </script>
 
 <style scoped>
@@ -427,23 +346,6 @@ function demoAccessCodes(): AccessCodeSummary[] {
 .setup-tab.is-selected .setup-tab__meta { color: var(--color-primary-ink); font-weight: 800; }
 .setup-tab-panel, .setup-tab-stack { display: grid; gap: 16px; min-width: 0; }
 .config-editor { display: grid; gap: 18px; }
-.access-password-section { display: grid; gap: 16px; }
-.access-password-section__badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-.access-password-notice { margin: 0; }
-.password-management-subhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
-.password-management-subhead h3 { color: var(--color-ink); font-size: 14px; font-weight: 800; }
-.password-management-subhead p { margin-top: 4px; color: var(--color-muted); font-size: 11px; line-height: 1.5; }
-.password-management-divider { height: 1px; background: var(--color-border); }
-.role-code-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-.role-code-row .notice { flex: 1; }
-.role-code-row .ghost-button { flex: 0 0 auto; }
-.one-time-code { color: var(--color-accent); font-size: 17px; letter-spacing: .12em; }
-.access-password-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.access-password-item { display: grid; gap: 12px; padding: 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
-.access-password-item__identity { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.access-password-item__identity strong { overflow: hidden; color: var(--color-ink); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
-.access-password-item__field { gap: 6px; }
-.access-password-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--color-muted); font-size: 11px; }
 .product-config-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .product-config-item { display: grid; gap: 14px; padding: 16px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
 .product-config-item__head { display: flex; align-items: center; gap: 10px; }
@@ -528,7 +430,7 @@ function demoAccessCodes(): AccessCodeSummary[] {
 .toggle-field { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; color: var(--color-muted); font-size: 12px; white-space: nowrap; }
 .toggle-field input { width: 16px; height: 16px; accent-color: var(--color-primary); }
 @media (max-width: 1040px) { .setup-row--assets { grid-template-columns: 30px minmax(120px, 1fr) 80px repeat(4, 58px); } .team-profile-grid { grid-template-columns: 1fr; } .rules-grid { grid-template-columns: 1fr; } }
-@media (max-width: 760px) { .setup-tabs-shell { padding-top: 8px; } .setup-tab { flex-basis: 138px; } .product-config-grid { grid-template-columns: 1fr; } .product-config-fields { grid-template-columns: 1fr 1fr; } .product-config-fields .form-field:first-child, .product-config-fields .form-field:nth-child(2) { grid-column: 1 / -1; } .team-profile-fields { grid-template-columns: 1fr 1fr; } .team-profile-card__assets { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-row--assets { grid-template-columns: 30px minmax(0, 1fr) 88px; } .setup-row--assets .form-field:nth-child(n + 4) { grid-column: 2 / span 2; } .setup-row--market { grid-template-columns: 30px minmax(0, 1fr) 64px 64px; } .rate-summary { justify-content: flex-start; text-align: left; } .rates-toolbar { align-items: stretch; flex-direction: column; } .period-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .period-tab { min-width: 0; } .market-filter { min-width: 0; } .rate-table-wrap { width: calc(100% + 36px); max-width: none; margin-inline: -18px; border-width: 1px 0; border-radius: 0; } .setup-rate-table { min-width: 860px; } .role-code-row { align-items: stretch; flex-direction: column; } .role-code-row .ghost-button { width: 100%; } .password-management-subhead { flex-direction: column; gap: 8px; } .access-password-section__badges { justify-content: flex-start; } .access-password-list { grid-template-columns: 1fr; } .access-password-actions { align-items: stretch; flex-direction: column; } }
+@media (max-width: 760px) { .setup-tabs-shell { padding-top: 8px; } .setup-tab { flex-basis: 138px; } .product-config-grid { grid-template-columns: 1fr; } .product-config-fields { grid-template-columns: 1fr 1fr; } .product-config-fields .form-field:first-child, .product-config-fields .form-field:nth-child(2) { grid-column: 1 / -1; } .team-profile-fields { grid-template-columns: 1fr 1fr; } .team-profile-card__assets { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-row--assets { grid-template-columns: 30px minmax(0, 1fr) 88px; } .setup-row--assets .form-field:nth-child(n + 4) { grid-column: 2 / span 2; } .setup-row--market { grid-template-columns: 30px minmax(0, 1fr) 64px 64px; } .rate-summary { justify-content: flex-start; text-align: left; } .rates-toolbar { align-items: stretch; flex-direction: column; } .period-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .period-tab { min-width: 0; } .market-filter { min-width: 0; } .rate-table-wrap { width: calc(100% + 36px); max-width: none; margin-inline: -18px; border-width: 1px 0; border-radius: 0; } .setup-rate-table { min-width: 860px; } }
 @media (max-width: 480px) {
   .setup-tab { flex-basis: 132px; min-height: 58px; }
   .setup-tab__meta { display: none; }

@@ -1,6 +1,6 @@
 import { computed, reactive } from 'vue'
 
-import { getMe, getSnapshot, login } from '@/lib/api'
+import { getMe, getSnapshot, googleLogin } from '@/lib/api'
 import type { AccessIdentity, GameSnapshot } from '@/types/game'
 
 const tokenKey = 'active-magic-village-token'
@@ -15,8 +15,8 @@ const state = reactive<{ token: string | null; identity: AccessIdentity | null; 
 export function useSession() {
   const isAuthenticated = computed(() => Boolean(state.token && state.identity))
 
-  async function signIn(sessionId: string, accessCode: string) {
-    const result = await login(sessionId, accessCode)
+  async function signInGoogle(sessionId: string, credential: string) {
+    const result = await googleLogin(sessionId, credential)
     state.token = result.token
     state.identity = result.access
     localStorage.setItem(tokenKey, result.token)
@@ -44,6 +44,5 @@ export function useSession() {
     localStorage.removeItem(identityKey)
   }
 
-  return { state, isAuthenticated, signIn, restore, signOut }
+  return { state, isAuthenticated, signInGoogle, restore, signOut }
 }
-
