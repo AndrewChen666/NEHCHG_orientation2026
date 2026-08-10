@@ -149,7 +149,8 @@ async function loadPublicHome() {
 </script>
 
 <style scoped>
-.home-page { --home-bg: oklch(.1 .04 255); --home-ink: oklch(.91 .025 90); --home-muted: oklch(.72 .03 255); --home-accent: oklch(.78 .14 80); --home-line: oklch(.78 .14 80 / .22); --home-line-strong: oklch(.78 .14 80 / .62); min-height: 100vh; color: var(--home-ink); background: var(--home-bg); overflow-x: clip; -webkit-tap-highlight-color: oklch(.78 .14 80 / .16); }
+.home-page { --home-bg: oklch(.1 .04 255); --home-ink: oklch(.91 .025 90); --home-muted: oklch(.72 .03 255); --home-accent: oklch(.78 .14 80); --home-line: oklch(.78 .14 80 / .22); --home-line-strong: oklch(.78 .14 80 / .62); width: 100%; max-width: 100%; min-height: 100vh; min-height: 100dvh; color: var(--home-ink); background: var(--home-bg); overflow-x: clip; -webkit-tap-highlight-color: oklch(.78 .14 80 / .16); }
+.home-page [id] { scroll-margin-top: 84px; }
 .home-page :where(a, button) { touch-action: manipulation; }
 .home-skip-link { position: absolute; top: 12px; left: 12px; z-index: 10; padding: 8px 12px; color: var(--home-bg); background: var(--home-accent); transform: translateY(-160%); transition: transform 160ms ease-out; }
 .home-skip-link:focus { transform: translateY(0); }
@@ -326,18 +327,18 @@ async function loadPublicHome() {
 }
 
 @media (max-width: 680px) {
-  .home-header { min-height: 70px; padding: 10px 20px; background: oklch(.1 .04 255 / .92); }
+  .home-header { min-height: 70px; padding: max(10px, env(safe-area-inset-top)) 20px 10px; background: oklch(.1 .04 255 / .92); }
   .home-brand { flex: 1 1 auto; min-width: 0; }
   .home-brand__copy { display: grid; min-width: 0; }
   .home-brand__copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .home-brand__crest { width: 38px; height: 43px; }
-  .home-menu-toggle { display: grid; gap: 4px; width: 36px; height: 36px; place-content: center; margin-left: auto; color: var(--home-accent); background: transparent; border: 1px solid var(--home-line-strong); transition: border-color 160ms ease-out, transform 160ms ease-out; }
+  .home-menu-toggle { display: grid; gap: 4px; width: 44px; height: 44px; place-content: center; margin-left: auto; color: var(--home-accent); background: transparent; border: 1px solid var(--home-line-strong); transition: border-color 160ms ease-out, transform 160ms ease-out; }
   .home-menu-toggle:active { transform: scale(.94); transition-duration: 80ms; }
   .home-menu-toggle i { display: block; width: 16px; height: 1px; background: currentColor; }
   .home-nav { position: absolute; top: 69px; right: 0; left: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 8px 20px 16px; visibility: hidden; background: oklch(.1 .04 255 / .98); border-bottom: 1px solid var(--home-line-strong); opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity 180ms ease-out, transform 220ms var(--ease-out-quart), visibility 0s linear 220ms; }
   .home-header.is-open .home-nav { visibility: visible; opacity: 1; pointer-events: auto; transform: translateY(0); transition-delay: 0s; }
   .home-nav a { padding: 13px 0; border-bottom: 1px solid var(--home-line); }
-  .home-header__login { padding: 8px 10px; font-size: 10px; }
+  .home-header__login { min-height: 44px; padding: 0 10px; font-size: 10px; }
   .home-hero { display: block; min-height: 760px; padding: 146px 24px 90px; background: radial-gradient(circle at 78% 47%, oklch(.3 .13 259 / .7), transparent 20rem), var(--home-bg); }
   .home-hero__copy { max-width: 35ch; }
   .home-hero h1 { font-size: clamp(28px, 8.9vw, 46px); }
@@ -353,12 +354,15 @@ async function loadPublicHome() {
   .home-section__heading { align-items: start; gap: 12px; margin-bottom: 30px; }
   .home-section__rule { display: none; }
   .schedule-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .schedule-table, .schedule-table tbody, .schedule-table tr, .schedule-table td { display: block; width: auto; }
-  .schedule-table tr { padding: 14px 0; }
-  .schedule-table td { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 12px; padding: 7px 0; border: 0; }
-  .schedule-table td::before { color: var(--home-accent); content: attr(data-label); font-size: 10px; letter-spacing: .08em; }
-  .schedule-table td:first-child time { font-size: 24px; }
-  .schedule-table td strong { font-size: 19px; }
+  .schedule-table, .schedule-table tbody { display: block; width: 100%; }
+  .schedule-table tbody { display: grid; }
+  .schedule-table tr { display: grid; grid-template-columns: minmax(84px, .46fr) minmax(0, 1fr); gap: 4px 14px; width: 100%; padding: 17px 0; border-bottom: 1px solid var(--home-line); }
+  .schedule-table tr:last-child { border-bottom: 0; }
+  .schedule-table td { display: block; width: auto; padding: 0; border: 0; }
+  .schedule-table td::before { display: block; margin-bottom: 5px; color: var(--home-accent); content: attr(data-label); font-size: 9px; letter-spacing: .1em; }
+  .schedule-table td:first-child { grid-row: 1 / span 2; padding-right: 4px; }
+  .schedule-table td:first-child time { display: block; color: var(--home-accent); font-size: clamp(15px, 4.4vw, 20px); line-height: 1.2; white-space: nowrap; }
+  .schedule-table td strong { font-size: 18px; line-height: 1.35; }
   .schedule-table td p { line-height: 1.55; }
   .house-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .house-plaque { min-height: 220px; padding: 20px 10px; }
@@ -367,7 +371,7 @@ async function loadPublicHome() {
   .home-footer { align-items: start; flex-direction: column; width: min(100% - 40px, 540px); }
 }
 @media (max-width: 480px) {
-  .home-header { position: sticky; top: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; padding: 10px 16px; }
+  .home-header { position: sticky; top: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; padding: max(10px, env(safe-area-inset-top)) 16px 10px; }
   .home-brand { gap: 8px; }
   .home-brand__copy strong { font-size: 14px; }
   .home-brand__copy small { font-size: 8px; letter-spacing: .12em; }
@@ -389,9 +393,20 @@ async function loadPublicHome() {
   .home-hero__meta { position: relative; order: 3; inset: auto; align-self: flex-start; margin: -34px 0 0; padding-bottom: 30px; }
   .home-section { width: min(100% - 32px, 540px); padding-block: 64px; }
   .home-section__heading { flex-direction: column; align-items: flex-start; margin-bottom: 24px; }
+  .home-section__heading h2 { font-size: clamp(32px, 9vw, 42px); }
   .home-section__heading > p { margin-left: 0; }
   .home-section__count { margin-top: -4px; }
   .home-footer { width: min(100% - 32px, 540px); padding-bottom: max(30px, calc(30px + env(safe-area-inset-bottom))); }
+}
+@media (max-width: 360px) {
+  .home-header { grid-template-columns: minmax(0, 1fr) auto; }
+  .home-header__login { display: none; }
+  .home-section { width: min(100% - 28px, 540px); }
+  .schedule-table tr { grid-template-columns: minmax(76px, .42fr) minmax(0, 1fr); column-gap: 11px; }
+  .schedule-table td:first-child time { font-size: 15px; }
+  .schedule-table td strong { font-size: 17px; }
+  .house-grid { grid-template-columns: 1fr; }
+  .house-plaque { min-height: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .home-skip-link, .home-nav a, .home-header__login, .brass-button, .quiet-link, .schedule-table tbody tr, .house-plaque, .home-section { transition: none; }
