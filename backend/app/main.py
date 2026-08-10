@@ -55,6 +55,9 @@ def create_app() -> FastAPI:
             from uuid import UUID
 
             parsed_session_id = UUID(session_id)
+            if context.participant_id is None:
+                await websocket.close(code=1008, reason="google login required")
+                return
             broker = websocket.app.state.event_broker
             await broker.subscribe(parsed_session_id, websocket)
             await websocket.send_json({"type": "stream.ready", "session_id": session_id})

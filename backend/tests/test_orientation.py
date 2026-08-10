@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from unittest import TestCase
@@ -8,6 +9,7 @@ from fastapi import HTTPException
 
 from app.activity import effective_elapsed_ms, stage_is_current
 from app.config import Settings
+from app.dependencies import get_auth_context
 from app.routers.auth import _verify_google_credential
 from app.routers.orientation import RoleAssignmentInput, ScoreEventRequest, StageBatchRequest
 from app.security import AuthContext, create_session_token, decode_session_token
@@ -76,3 +78,9 @@ class AuthTokenTest(TestCase):
         restored = decode_session_token(token, "test-secret")
         self.assertEqual(restored.available_roles, ("score_keeper", "participant"))
 
+    def test_legacy_token_is_rejected_by_api_authentication(self):
+        context = AuthContext(access_id=uuid4(), session_id=uuid4(), role="coordinator")
+        token = create_session_token(context, "test-secret", 60)
+        with self.assertRaises(HTTPException) as error:
+            asyncio.run(get_auth_context(f"Bearer {token}", Settings(session_secret="test-secret"), None))
+        self.assertEqual(error.exception.detail["code"], "GOOGLE_LOGIN_REQUIRED")

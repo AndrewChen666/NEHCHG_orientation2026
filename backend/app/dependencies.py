@@ -17,12 +17,12 @@ async def get_auth_context(
         raise HTTPException(status_code=401, detail={"code": "AUTH_REQUIRED", "message": "請先使用 Google 登入。"})
     try:
         context = decode_session_token(authorization.removeprefix("Bearer ").strip(), settings.session_secret)
-        if context.participant_id is not None:
-            refreshed = await _refresh_google_context(pool, context)
-            if refreshed is None:
-                raise HTTPException(status_code=403, detail={"code": "STAGE_ROLE_MISSING", "message": "目前階段沒有可用的活動身分。"})
-            return refreshed
-        return context
+        if context.participant_id is None:
+            raise HTTPException(status_code=401, detail={"code": "GOOGLE_LOGIN_REQUIRED", "message": "舊版登入已停用，請重新使用 Google 登入。"})
+        refreshed = await _refresh_google_context(pool, context)
+        if refreshed is None:
+            raise HTTPException(status_code=403, detail={"code": "STAGE_ROLE_MISSING", "message": "目前階段沒有可用的活動身分。"})
+        return refreshed
     except ValueError as exc:
         raise HTTPException(status_code=401, detail={"code": "AUTH_INVALID", "message": "登入已失效，請重新使用 Google 登入。"}) from exc
 
