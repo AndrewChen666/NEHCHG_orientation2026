@@ -4,19 +4,19 @@
 
 ## 專案結構
 
-- `frontend/`：登入入口、總召 `/admin`、關主 `/master`、隊伍 `/user` 與共用設計系統。
+- `frontend/`：Google 登入入口、總召 `/admin`、活動設定 `/admin/activity`、現場工作台 `/activity`、關主 `/master`、隊伍 `/user` 與共用設計系統。
 - `backend/`：FastAPI app、API router、即時事件 broker、環境設定與 PostgreSQL migration。
-- `backend/migrations/001_initial_schema.sql`、`003_manual_market_operations.sql`、`004_magic_boss_role.sql`、`005_editable_product_identifiers.sql`、`006_team_profiles.sql`、`007_public_team_profiles.sql`：Supabase SQL editor 依序執行的 schema 與流程補充 migration。
+- `backend/migrations/001_initial_schema.sql`、`003_manual_market_operations.sql`、`004_magic_boss_role.sql`、`005_editable_product_identifiers.sql`、`006_team_profiles.sql`、`007_public_team_profiles.sql`、`008_orientation_identity_activity.sql`、`009_disable_legacy_passwords.sql`：Supabase SQL editor 依序執行的 schema 與流程補充 migration。
 - `PRODUCT.md`、`DESIGN.md`：產品與視覺上下文。
 - `docs/`：遊戲規則、架構、角色權限與 API 契約。
 
 ## 啟動順序
 
-1. 在 Supabase 依序執行 `backend/migrations/001_initial_schema.sql`、`003_manual_market_operations.sql`、`004_magic_boss_role.sql`、`005_editable_product_identifiers.sql`、`006_team_profiles.sql`、`007_public_team_profiles.sql`。
-2. 複製 `backend/.env.example` 為 `backend/.env`，填入 `DATABASE_URL` 與 `SESSION_SECRET`。
+1. 在 Supabase 依序執行 `backend/migrations/001_initial_schema.sql`、`003_manual_market_operations.sql`、`004_magic_boss_role.sql`、`005_editable_product_identifiers.sql`、`006_team_profiles.sql`、`007_public_team_profiles.sql`、`008_orientation_identity_activity.sql`、`009_disable_legacy_passwords.sql`。
+2. 在 Google Cloud Console 建立 Web OAuth Client ID，將同一個 ID 填入 `backend/.env` 的 `GOOGLE_CLIENT_ID`／`GOOGLE_ALLOWED_CLIENT_IDS` 與 `frontend/.env` 的 `VITE_GOOGLE_CLIENT_ID`；再填入 `DATABASE_URL` 與 `SESSION_SECRET`。
 3. 依 `backend/README.md` 安裝 Python 依賴並啟動 FastAPI。
 4. 複製 `frontend/.env.example` 為 `frontend/.env`，在 `frontend/` 執行 `npm install`、`npm run dev`。
-5. 開發階段可直接進入 `/admin`、`/master`、`/user` 查看展示快照；接上後端後使用 `/login` 的角色代碼入口。
+5. 使用 `/login` 輸入場次 UUID，再以已匯入白名單的 Google 帳號登入。總召可在 `/admin/activity` 匯入參加者、編排階段、設定倍率與指派身分；隊輔／記分員使用 `/activity`。
 
 ## Windows 一鍵啟動
 
@@ -26,7 +26,7 @@
 powershell -ExecutionPolicy Bypass -File .\start.ps1
 ```
 
-啟動腳本會自動開啟 `http://localhost:5175`。若 `.env` 還是範例值，後端會以無資料庫模式啟動，方便先查看介面；登入與遊戲操作仍需設定有效的 Supabase `DATABASE_URL`。
+啟動腳本會自動開啟 `http://localhost:5175`。若 `.env` 還是範例值，後端會以無資料庫模式啟動，方便先查看介面；Google 登入與遊戲操作仍需設定有效的 Supabase `DATABASE_URL` 及 Google Client ID。
 
 常用參數：
 

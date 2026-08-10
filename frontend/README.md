@@ -1,6 +1,6 @@
 # 活米村前端
 
-Vue 3＋Vite＋TypeScript 的角色工作台。`/admin` 是總召、`/master` 是市場關主、`/user` 是隊伍工作區；`/login` 是角色代碼入口。
+Vue 3＋Vite＋TypeScript 的活動工作台。`/admin/activity` 是總召的活動流程設定、`/activity` 是破冰／計分現場工作台、`/master` 是市場關主、`/user` 是隊伍工作區；`/login` 使用 Google 登入。
 
 This template should help get you started developing with Vue 3 in Vite.
 
