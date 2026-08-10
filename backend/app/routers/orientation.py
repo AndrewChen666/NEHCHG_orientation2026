@@ -198,6 +198,49 @@ async def list_participants(
     return [_participant_dict(row) for row in rows]
 
 
+@router.get("/sessions/{session_id}/participants")
+async def list_activity_participants(
+    session_id: UUID,
+    pool: Pool = Depends(get_pool),
+    context: AuthContext = Depends(require_roles("coordinator", "score_keeper", "team_facilitator", "icebreaker_facilitator")),
+) -> list[dict[str, object]]:
+    require_session(context, session_id)
+    rows = await pool.fetch(
+        """
+        SELECT p.id, p.participant_no, p.display_name, p.email, p.google_subject,
+               p.college_id, c.code AS college_code, c.name AS college_name,
+               p.team_id, t.number AS team_number, t.name AS team_name, p.active
+        FROM participants p
+        LEFT JOIN colleges c ON c.id = p.college_id
+        LEFT JOIN teams t ON t.id = p.team_id
+        WHERE p.session_id = $1 AND p.active = TRUE
+        ORDER BY p.participant_no
+        """,
+        session_id,
+    )
+    return [_participant_dict(row) for row in rows]
+
+
+@router.get("/sessions/{session_id}/score-targets")
+async def score_targets(
+    session_id: UUID,
+    pool: Pool = Depends(get_pool),
+    context: AuthContext = Depends(require_roles("coordinator", "score_keeper", "team_facilitator")),
+) -> dict[str, list[dict[str, object]]]:
+    require_session(context, session_id)
+    participants = await pool.fetch(
+        "SELECT id, participant_no, display_name, team_id, college_id FROM participants WHERE session_id = $1 AND active = TRUE ORDER BY participant_no",
+        session_id,
+    )
+    teams = await pool.fetch("SELECT id, number, name FROM teams WHERE session_id = $1 ORDER BY number", session_id)
+    colleges = await pool.fetch("SELECT id, code, name FROM colleges WHERE session_id = $1 ORDER BY code", session_id)
+    return {
+        "personal": [dict(row) for row in participants],
+        "team": [dict(row) for row in teams],
+        "college": [dict(row) for row in colleges],
+    }
+
+
 @router.post("/setup/sessions/{session_id}/participants/import")
 async def import_participants(
     session_id: UUID,
