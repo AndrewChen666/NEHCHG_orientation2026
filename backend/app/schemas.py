@@ -17,6 +17,12 @@ class SessionAccess(BaseModel):
     team_id: UUID | None = None
     market_id: UUID | None = None
     display_name: str | None = None
+    participant_id: UUID | None = None
+    participant_no: str | None = None
+    college_id: UUID | None = None
+    stage_id: UUID | None = None
+    stage_name: str | None = None
+    available_roles: list[str] = Field(default_factory=list)
 
 
 class LoginResponse(BaseModel):
@@ -100,3 +106,9 @@ class BlackMarketApplyRequest(BaseModel):
 class ClockActionResponse(BaseModel):
     session: SessionSummary
     event_sequence: int | None = None
+
+
+class GoogleLoginRequest(BaseModel):
+    session_id: UUID
+    credential: str = Field(min_length=32, max_length=16_384)
+    role: str | None = Field(default=None, min_length=2, max_length=40)

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .db import close_pool, open_pool
 from .realtime import EventBroker
-from .routers import actions, auth, health, public, sessions, setup, special
+from .routers import actions, auth, health, orientation, public, sessions, setup, special
 from .security import decode_session_token
 
 
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(actions.router)
     app.include_router(setup.router)
     app.include_router(special.router)
+    app.include_router(orientation.router)
 
     @app.websocket("/api/v1/sessions/{session_id}/stream")
     async def session_stream(websocket: WebSocket, session_id: str):

@@ -5,6 +5,7 @@ from asyncpg import Pool
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_pool
+from ..activity import get_current_stage
 from ..dependencies import get_auth_context, get_event_broker, require_roles, require_session
 from ..game_config import normalize_config
 from ..realtime import EventBroker
@@ -57,6 +58,7 @@ async def snapshot(
 ) -> dict[str, object]:
     require_session(context, session_id)
     row = await _get_session(pool, session_id)
+    current_stage = await get_current_stage(pool, session_id)
     teams = await pool.fetch(
         """
         SELECT t.id, t.number, t.name, w.balance AS money
@@ -78,6 +80,13 @@ async def snapshot(
     visible_markets = markets if context.role in {"coordinator", "market_master"} else markets
     return {
         "session": _summary(row),
+        "current_stage": {
+            "id": current_stage["id"],
+            "name": current_stage["name"],
+            "stage_type": current_stage["stage_type"],
+            "sort_order": current_stage["sort_order"],
+        } if current_stage else None,
+        "active_roles": list(context.available_roles),
         "teams": [dict(item) for item in visible_teams],
         "markets": [dict(item) for item in visible_markets],
         "last_event_sequence": await pool.fetchval(

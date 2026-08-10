@@ -5,18 +5,17 @@ from uuid import UUID, uuid4
 
 from asyncpg import Pool
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..config import Settings, get_settings
 from ..db import get_pool
 from ..dependencies import require_roles, require_session
 from ..game_config import DEFAULT_PRODUCTS, DEFAULT_RULES, DEFAULT_TEAM_PROFILES, MAP_IMAGE_MAX_LENGTH, MAP_IMAGE_PREFIXES, TEAM_COUNT, TEAM_TONES, normalize_config
-from ..security import AuthContext, hash_access_code
+from ..security import AuthContext
 
 router = APIRouter(prefix="/api/v1/setup", tags=["setup"])
 
 MARKET_CODES = tuple("ABCDEFGH")
-CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
 class InventorySeed(BaseModel):
@@ -131,6 +130,7 @@ def _default_markets() -> list[MarketSeed]:
 
 class SessionBootstrapRequest(BaseModel):
     name: str = Field(min_length=1, max_length=80)
+    coordinator_email: str = Field(min_length=5, max_length=320)
     scheduled_start: datetime | None = None
     teams: list[TeamSeed] = Field(default_factory=_default_teams)
     markets: list[MarketSeed] = Field(default_factory=_default_markets)
@@ -139,6 +139,8 @@ class SessionBootstrapRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_layout(self):
+        if "@" not in self.coordinator_email:
+            raise ValueError("總召 email 格式不正確。")
         if len(self.teams) != TEAM_COUNT:
             raise ValueError(f"場次必須設定 {TEAM_COUNT} 個小隊。")
         if len(self.markets) != 8:
@@ -156,57 +158,9 @@ class SessionBootstrapRequest(BaseModel):
         return self
 
 
-class AccessCodeView(BaseModel):
-    label: str
-    role: str
-    code: str
-    team_id: UUID | None = None
-    market_id: UUID | None = None
-
-
-class AccessCodeSummary(BaseModel):
-    access_id: UUID
-    role: str
-    display_name: str
-    team_id: UUID | None = None
-    market_id: UUID | None = None
-    active: bool
-
-
-class AccessCodePasswordUpdate(BaseModel):
-    access_id: UUID
-    password: str = Field(min_length=4, max_length=64)
-
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("登入密碼不可只有空白。")
-        return value
-
-
-class AccessCodePasswordBatchRequest(BaseModel):
-    passwords: list[AccessCodePasswordUpdate] = Field(min_length=1, max_length=32)
-
-    @model_validator(mode="after")
-    def validate_unique_access_ids(self):
-        access_ids = [item.access_id for item in self.passwords]
-        if len(set(access_ids)) != len(access_ids):
-            raise ValueError("同一個身分不可重複設定密碼。")
-        return self
-
-
 class SessionBootstrapResponse(BaseModel):
     session_id: UUID
     status: str
-    coordinator: AccessCodeView
-    magic_boss: AccessCodeView
-    market_codes: list[AccessCodeView]
-    team_codes: list[AccessCodeView]
-
-
-def _new_code() -> str:
-    return "".join(secrets.choice(CODE_ALPHABET) for _ in range(8))
 
 
 def _assert_setup_key(configured_key: str | None, provided_key: str | None) -> None:
@@ -223,10 +177,6 @@ async def bootstrap_session(
 ) -> SessionBootstrapResponse:
     _assert_setup_key(settings.setup_key, x_setup_key)
     status = "scheduled" if payload.scheduled_start else "draft"
-    coordinator_code = _new_code()
-    magic_boss_code = _new_code()
-    market_codes: list[AccessCodeView] = []
-    team_codes: list[AccessCodeView] = []
 
     async with pool.acquire() as connection:
         async with connection.transaction():
@@ -238,24 +188,38 @@ async def bootstrap_session(
                 json.dumps(payload.config.model_dump()),
             )
             await connection.execute("INSERT INTO game_event_counters (session_id) VALUES ($1)", session_id)
+            stage_id = await connection.fetchval(
+                """
+                INSERT INTO activity_stages (
+                  session_id, name, stage_type, sort_order, start_offset_ms,
+                  duration_minutes, config
+                )
+                VALUES ($1, '活米村', 'magic_village', 1, 0, $2, $3::jsonb)
+                RETURNING id
+                """,
+                session_id,
+                payload.config.rules.period_count * payload.config.rules.period_duration_minutes,
+                json.dumps({"legacy_period_count": payload.config.rules.period_count}),
+            )
             coordinator_id = await connection.fetchval(
                 """
-                INSERT INTO access_codes (session_id, role, display_name, code_hash)
-                VALUES ($1, 'coordinator', '總召控制台', $2) RETURNING id
+                INSERT INTO participants (session_id, participant_no, display_name, email)
+                VALUES ($1, 'COORDINATOR', '總召', $2)
+                RETURNING id
                 """,
                 session_id,
-                hash_access_code(coordinator_code),
+                payload.coordinator_email.strip().lower(),
             )
             if coordinator_id is None:
-                raise HTTPException(status_code=500, detail={"code": "BOOTSTRAP_FAILED", "message": "無法建立總召代碼。"})
-
+                raise HTTPException(status_code=500, detail={"code": "BOOTSTRAP_FAILED", "message": "無法建立總召身分。"})
             await connection.execute(
                 """
-                INSERT INTO access_codes (session_id, role, display_name, code_hash)
-                VALUES ($1, 'magic_boss', '隱藏魔王工作台', $2)
+                INSERT INTO stage_role_assignments (session_id, stage_id, participant_id, role, scope_type)
+                VALUES ($1, $2, $3, 'coordinator', 'session')
                 """,
                 session_id,
-                hash_access_code(magic_boss_code),
+                stage_id,
+                coordinator_id,
             )
 
             team_ids: list[UUID] = []
@@ -285,18 +249,6 @@ async def bootstrap_session(
                         product.key,
                         quantity,
                     )
-                access_code = _new_code()
-                await connection.execute(
-                    """
-                    INSERT INTO access_codes (session_id, role, display_name, team_id, code_hash)
-                    VALUES ($1, 'team_facilitator', $2, $3, $4)
-                    """,
-                    session_id,
-                    f"第 {number} 隊・{team.name}",
-                    team_id,
-                    hash_access_code(access_code),
-                )
-                team_codes.append(AccessCodeView(label=team.name, role="team_facilitator", code=access_code, team_id=team_id))
 
             market_ids: dict[str, UUID] = {}
             for code, market in zip(MARKET_CODES, payload.markets, strict=True):
@@ -309,18 +261,6 @@ async def bootstrap_session(
                     market.map_y,
                 )
                 market_ids[code] = market_id
-                access_code = _new_code()
-                await connection.execute(
-                    """
-                    INSERT INTO access_codes (session_id, role, display_name, market_id, code_hash)
-                    VALUES ($1, 'market_master', $2, $3, $4)
-                    """,
-                    session_id,
-                    f"{code} 市場・{market.name}",
-                    market_id,
-                    hash_access_code(access_code),
-                )
-                market_codes.append(AccessCodeView(label=market.name, role="market_master", code=access_code, market_id=market_id))
 
             for rate in payload.rates:
                 await connection.execute(
@@ -344,106 +284,7 @@ async def bootstrap_session(
     return SessionBootstrapResponse(
         session_id=session_id,
         status=status,
-        coordinator=AccessCodeView(label="總召控制台", role="coordinator", code=coordinator_code),
-        magic_boss=AccessCodeView(label="隱藏魔王工作台", role="magic_boss", code=magic_boss_code),
-        market_codes=market_codes,
-        team_codes=team_codes,
     )
-
-
-@router.post("/sessions/{session_id}/magic-boss-code", response_model=AccessCodeView)
-async def rotate_magic_boss_code(
-    session_id: UUID,
-    pool: Pool = Depends(get_pool),
-    context: AuthContext = Depends(require_roles("coordinator")),
-) -> AccessCodeView:
-    require_session(context, session_id)
-    access_code = _new_code()
-    async with pool.acquire() as connection:
-        async with connection.transaction():
-            session_exists = await connection.fetchval("SELECT EXISTS(SELECT 1 FROM game_sessions WHERE id = $1)", session_id)
-            if not session_exists:
-                raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
-            await connection.execute("UPDATE access_codes SET active = FALSE WHERE session_id = $1 AND role = 'magic_boss'", session_id)
-            await connection.execute(
-                "INSERT INTO access_codes (session_id, role, display_name, code_hash) VALUES ($1, 'magic_boss', '隱藏魔王工作台', $2)",
-                session_id,
-                hash_access_code(access_code),
-            )
-            await connection.execute(
-                "INSERT INTO audit_logs (session_id, actor_id, action, payload) VALUES ($1, $2, 'magic_boss_code.rotate', $3::jsonb)",
-                session_id,
-                context.access_id,
-                json.dumps({"role": "magic_boss"}),
-            )
-    return AccessCodeView(label="隱藏魔王工作台", role="magic_boss", code=access_code)
-
-
-@router.get("/sessions/{session_id}/access-codes", response_model=list[AccessCodeSummary])
-async def list_access_codes(
-    session_id: UUID,
-    pool: Pool = Depends(get_pool),
-    context: AuthContext = Depends(require_roles("coordinator")),
-) -> list[AccessCodeSummary]:
-    require_session(context, session_id)
-    rows = await pool.fetch(
-        """
-        SELECT id AS access_id, role, display_name, team_id, market_id, active
-        FROM access_codes
-        WHERE session_id = $1 AND role <> 'coordinator' AND active = TRUE
-        ORDER BY CASE role
-            WHEN 'magic_boss' THEN 1
-            WHEN 'market_master' THEN 2
-            WHEN 'team_facilitator' THEN 3
-            ELSE 4
-        END, display_name
-        """,
-        session_id,
-    )
-    return [AccessCodeSummary(**dict(row)) for row in rows]
-
-
-@router.put("/sessions/{session_id}/access-code-passwords")
-async def update_access_code_passwords(
-    session_id: UUID,
-    payload: AccessCodePasswordBatchRequest,
-    pool: Pool = Depends(get_pool),
-    context: AuthContext = Depends(require_roles("coordinator")),
-) -> dict[str, int]:
-    require_session(context, session_id)
-    submitted_ids = [item.access_id for item in payload.passwords]
-    async with pool.acquire() as connection:
-        async with connection.transaction():
-            rows = await connection.fetch(
-                """
-                SELECT id, role
-                FROM access_codes
-                WHERE session_id = $1 AND active = TRUE AND id = ANY($2::uuid[])
-                FOR UPDATE
-                """,
-                session_id,
-                submitted_ids,
-            )
-            access_codes = {row["id"]: row for row in rows}
-            missing_ids = [access_id for access_id in submitted_ids if access_id not in access_codes]
-            if missing_ids:
-                raise HTTPException(status_code=422, detail={"code": "ACCESS_CODE_NOT_FOUND", "message": "找不到可設定的角色登入身分。"})
-            if any(row["role"] == "coordinator" for row in access_codes.values()):
-                raise HTTPException(status_code=422, detail={"code": "COORDINATOR_PASSWORD_FIXED", "message": "總召密碼維持場次建立時的預設密碼。"})
-
-            for item in payload.passwords:
-                await connection.execute(
-                    "UPDATE access_codes SET code_hash = $1 WHERE id = $2",
-                    hash_access_code(item.password),
-                    item.access_id,
-                )
-            await connection.execute(
-                "INSERT INTO audit_logs (session_id, actor_id, action, payload) VALUES ($1, $2, 'access_code.password.update', $3::jsonb)",
-                session_id,
-                context.access_id,
-                json.dumps({"count": len(payload.passwords), "roles": sorted({access_codes[item.access_id]["role"] for item in payload.passwords})}),
-            )
-    return {"updated": len(payload.passwords)}
 
 
 class RateBatchRequest(BaseModel):

@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     setup_key: str | None = None
     cors_origins: str = "http://localhost:5175"
     session_ttl_minutes: int = 720
+    google_client_id: str | None = None
+    google_allowed_client_ids: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -31,6 +33,13 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def google_client_id_list(self) -> list[str]:
+        values = [item.strip() for item in self.google_allowed_client_ids.split(",") if item.strip()]
+        if self.google_client_id and self.google_client_id not in values:
+            values.insert(0, self.google_client_id)
+        return values
 
 
 @lru_cache
