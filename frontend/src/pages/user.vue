@@ -127,5 +127,18 @@ function demoBoard(): MarketBoard {
 @keyframes user-stars-breathe { from { opacity: .48; } to { opacity: .88; } }
 @media (max-width: 980px) { .user-status { grid-template-columns: minmax(160px, .8fr) minmax(0, 1.5fr) 120px; } }
 @media (max-width: 700px) { .user-page { gap: 12px; }.user-hero { min-height: 248px; }.user-hero__copy { max-width: none; padding: 26px 20px 30px; }.user-status { grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px; }.user-status__location { grid-column: 1 / -1; padding-bottom: 10px; border-bottom: 1px solid var(--user-line); }.user-status__wallet { padding-left: 12px; }.user-panel-heading { flex-direction: column; }.user-panel-heading__meta { width: 100%; align-items: start; justify-items: start; }.user-market-panel { padding: 16px; } }
+@media (max-width: 480px) {
+  .user-hero { min-height: 270px; }
+  .user-hero__copy { padding: 24px 16px 28px; }
+  .user-kicker { font-size: 9px; letter-spacing: .12em; }
+  .user-hero h1 { font-size: 30px; overflow-wrap: anywhere; }
+  .user-hero__actions { align-items: stretch; flex-direction: column; gap: 12px; }
+  .user-hero__button { width: min(100%, 240px); }
+  .user-status { grid-template-columns: 1fr; gap: 12px; padding: 13px; }
+  .user-status__location { grid-column: auto; }
+  .user-status__wallet { padding: 12px 0 0; border-top: 1px solid var(--user-line); border-left: 0; }
+  .user-market-panel { padding: 14px; }
+  .user-panel-heading h2 { font-size: 19px; }
+}
 @media (prefers-reduced-motion: reduce) { .user-hero__stars { animation: none; } }
 </style>

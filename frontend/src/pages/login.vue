@@ -143,5 +143,21 @@ async function handleSubmit() {
   .login-panel::before, .login-panel::after { display: none; }
   .mobile-brand { display: flex; }
 }
+@media (max-width: 480px) {
+  .login-art { min-height: 590px; padding-inline: 20px; }
+  .login-art__topline { max-width: 100%; line-height: 1.5; }
+  .login-art__copy { margin-top: 82px; }
+  .login-art__copy h1 { font-size: clamp(40px, 13vw, 58px); line-height: 1.02; }
+  .login-art__copy h1 span, .login-art__copy h1 em { white-space: normal; overflow-wrap: anywhere; }
+  .login-art__ledger { grid-template-columns: 1fr; gap: 12px; max-width: 260px; }
+  .login-art__ledger strong { margin-top: 3px; }
+  .login-panel { min-height: auto; padding: 56px 20px max(64px, calc(48px + env(safe-area-inset-bottom))); }
+  .login-panel__inner { width: 100%; }
+  .mobile-brand { margin-bottom: 30px; }
+  .login-panel h2 { font-size: 30px; }
+  .login-form { gap: 16px; margin-top: 28px; }
+  .login-form input { min-height: 52px; font-size: 16px; }
+  .login-help { margin-top: 26px; }
+}
 @media (prefers-reduced-motion: reduce) { .login-form input, .login-submit { transition: none; } }
 </style>

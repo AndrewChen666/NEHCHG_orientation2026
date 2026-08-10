@@ -416,7 +416,7 @@ function demoAccessCodes(): AccessCodeSummary[] {
 <style scoped>
 .setup-tabs-shell { margin-bottom: 16px; padding-top: 10px; border-bottom: 1px solid var(--color-border); }
 .setup-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 1px; scrollbar-width: thin; }
-.setup-tab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; flex: 1 0 145px; min-height: 61px; padding: 10px 12px; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-border); border-bottom: 3px solid transparent; border-radius: var(--radius-sm) var(--radius-sm) 0 0; text-align: left; transition: color 160ms ease-out, background 160ms ease-out, border-color 160ms ease-out; }
+.setup-tab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; flex: 1 0 145px; min-height: 61px; padding: 10px 12px; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-border); border-bottom: 1px solid transparent; border-radius: var(--radius-sm) var(--radius-sm) 0 0; text-align: left; transition: color 160ms ease-out, background 160ms ease-out, border-color 160ms ease-out; }
 .setup-tab:hover { color: var(--color-primary); background: var(--color-primary-soft); border-color: oklch(0.7 0.07 255 / .48); }
 .setup-tab.is-selected { color: var(--color-ink); background: var(--color-surface-raised); border-color: var(--color-primary); border-bottom-color: var(--color-accent); }
 .setup-tab .icon { color: var(--color-primary); }
@@ -529,4 +529,22 @@ function demoAccessCodes(): AccessCodeSummary[] {
 .toggle-field input { width: 16px; height: 16px; accent-color: var(--color-primary); }
 @media (max-width: 1040px) { .setup-row--assets { grid-template-columns: 30px minmax(120px, 1fr) 80px repeat(4, 58px); } .team-profile-grid { grid-template-columns: 1fr; } .rules-grid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .setup-tabs-shell { padding-top: 8px; } .setup-tab { flex-basis: 138px; } .product-config-grid { grid-template-columns: 1fr; } .product-config-fields { grid-template-columns: 1fr 1fr; } .product-config-fields .form-field:first-child, .product-config-fields .form-field:nth-child(2) { grid-column: 1 / -1; } .team-profile-fields { grid-template-columns: 1fr 1fr; } .team-profile-card__assets { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-row--assets { grid-template-columns: 30px minmax(0, 1fr) 88px; } .setup-row--assets .form-field:nth-child(n + 4) { grid-column: 2 / span 2; } .setup-row--market { grid-template-columns: 30px minmax(0, 1fr) 64px 64px; } .rate-summary { justify-content: flex-start; text-align: left; } .rates-toolbar { align-items: stretch; flex-direction: column; } .period-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .period-tab { min-width: 0; } .market-filter { min-width: 0; } .rate-table-wrap { width: calc(100% + 36px); max-width: none; margin-inline: -18px; border-width: 1px 0; border-radius: 0; } .setup-rate-table { min-width: 860px; } .role-code-row { align-items: stretch; flex-direction: column; } .role-code-row .ghost-button { width: 100%; } .password-management-subhead { flex-direction: column; gap: 8px; } .access-password-section__badges { justify-content: flex-start; } .access-password-list { grid-template-columns: 1fr; } .access-password-actions { align-items: stretch; flex-direction: column; } }
+@media (max-width: 480px) {
+  .setup-tab { flex-basis: 132px; min-height: 58px; }
+  .setup-tab__meta { display: none; }
+  .product-config-fields,
+  .team-profile-fields,
+  .reward-editor__grid { grid-template-columns: 1fr; }
+  .product-config-fields .form-field:first-child, .product-config-fields .form-field:nth-child(2) { grid-column: auto; }
+  .team-profile-fields__wide { grid-column: auto; }
+  .setup-row--market,
+  .setup-row--assets { grid-template-columns: 30px minmax(0, 1fr); align-items: end; }
+  .setup-row--market .form-field,
+  .setup-row--assets .form-field { grid-column: 2; }
+  .setup-row--assets .form-field:nth-child(n + 4) { grid-column: 2; }
+  .team-profile-card__assets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rate-summary { display: grid; gap: 4px; }
+  .period-tabs { grid-template-columns: 1fr 1fr; }
+  .rate-table-wrap { width: calc(100% + 28px); margin-inline: -14px; }
+}
 </style>

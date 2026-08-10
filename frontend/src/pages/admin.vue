@@ -32,7 +32,7 @@
       <section class="section-block leaderboard-panel">
         <div class="section-block__head"><div><h2>隊伍金幣排行</h2><p>即時同步・依目前金錢袋排序</p></div><button class="text-button" type="button">查看完整榜單 →</button></div>
         <table class="data-table"><thead><tr><th>隊伍</th><th>金幣</th><th>資產趨勢</th><th>狀態</th></tr></thead><tbody>
-          <tr v-for="team in teams" :key="team.number"><td><div class="team-cell"><span class="team-badge">{{ team.number }}</span><div><strong>{{ team.name }}</strong><span>{{ team.note }}</span></div></div></td><td class="money-value">{{ team.money.toLocaleString() }}</td><td><div class="rank-bar"><span :style="{ width: `${team.ratio}%` }" /></div></td><td><span class="status-badge" :class="team.statusClass">{{ team.status }}</span></td></tr>
+          <tr v-for="team in teams" :key="team.number"><td data-label="隊伍"><div class="team-cell"><span class="team-badge">{{ team.number }}</span><div><strong>{{ team.name }}</strong><span>{{ team.note }}</span></div></div></td><td data-label="金幣" class="money-value">{{ team.money.toLocaleString() }}</td><td data-label="資產趨勢"><div class="rank-bar"><span :style="{ width: `${team.ratio}%` }" /></div></td><td data-label="狀態"><span class="status-badge" :class="team.statusClass">{{ team.status }}</span></td></tr>
         </tbody></table>
       </section>
       <section class="section-block events-panel"><div class="section-block__head"><div><h2>最新事件</h2><p>所有操作均保留紀錄</p></div><span class="status-badge is-success">即時</span></div><div class="event-list">
@@ -48,7 +48,7 @@
     <div class="three-column">
       <section class="section-block"><div class="section-block__head"><div><h2>市場佔領</h2><p>時段 2 尚未開放挑戰</p></div><Icon name="map" size="md" /></div><div class="market-list"><div v-for="market in markets" :key="market.code" class="market-row"><div class="market-row__name"><span class="market-code">{{ market.code }}</span><div><strong>{{ market.name }}</strong><span>{{ market.owner }}</span></div></div><span class="status-badge" :class="market.owner === '開放中' ? 'is-neutral' : 'is-success'">{{ market.owner === '開放中' ? '待佔領' : '已佔領' }}</span></div></div></section>
       <section class="section-block"><div class="section-block__head"><div><h2>遊戲時鐘</h2><p>可排程，也可手動控制</p></div><Icon name="clock" size="md" /></div><div class="notice"><Icon name="spark" size="sm" /><span>目前以伺服器時間計算。若現場需要調整，所有覆寫都會進入稽核紀錄。</span></div><div class="inline-row" style="margin-top: 18px"><span class="mini-label">下一段將於 13:30 自動開始</span><button class="ghost-button" type="button">暫停</button></div></section>
-      <section class="section-block"><div class="section-block__head"><div><h2>快速設定</h2><p>開局資料與事件資料</p></div><Icon name="dashboard" size="md" /></div><div class="action-grid" style="grid-template-columns: 1fr 1fr"><RouterLink v-for="item in quickActions" :key="item.label" :to="item.to" class="action-tile"><span class="action-tile__icon"><Icon :name="item.icon" size="sm" /></span><strong>{{ item.label }}</strong><span>{{ item.detail }}</span></RouterLink></div></section>
+      <section class="section-block"><div class="section-block__head"><div><h2>快速設定</h2><p>開局資料與事件資料</p></div><Icon name="dashboard" size="md" /></div><div class="action-grid quick-action-grid"><RouterLink v-for="item in quickActions" :key="item.label" :to="item.to" class="action-tile"><span class="action-tile__icon"><Icon :name="item.icon" size="sm" /></span><strong>{{ item.label }}</strong><span>{{ item.detail }}</span></RouterLink></div></section>
     </div>
   </GameShell>
 </template>
@@ -80,4 +80,23 @@ const goLogin = () => router.push('/login')
 
 <style scoped>
 .magic-owner-note { margin-top: 24px; }
+.quick-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.leaderboard-panel :deep(.data-table) { min-width: 0; }
+@media (max-width: 560px) {
+  .quick-action-grid { grid-template-columns: 1fr; }
+  .leaderboard-panel :deep(.data-table),
+  .leaderboard-panel :deep(.data-table thead),
+  .leaderboard-panel :deep(.data-table tbody),
+  .leaderboard-panel :deep(.data-table tr),
+  .leaderboard-panel :deep(.data-table td) { display: block; width: 100%; }
+  .leaderboard-panel :deep(.data-table thead) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .leaderboard-panel :deep(.data-table tr) { padding: 12px 0; border-top: 1px solid var(--color-border-subtle); }
+  .leaderboard-panel :deep(.data-table tr:first-child) { border-top: 0; }
+  .leaderboard-panel :deep(.data-table td),
+  .leaderboard-panel :deep(.data-table td:first-child),
+  .leaderboard-panel :deep(.data-table td:last-child) { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 10px; padding: 6px 0; border-top: 0; text-align: left; }
+  .leaderboard-panel :deep(.data-table td::before) { color: var(--color-muted); content: attr(data-label); font-size: 11px; font-weight: 800; }
+  .leaderboard-panel :deep(.team-cell) { min-width: 0; }
+  .leaderboard-panel :deep(.rank-bar) { width: min(100%, 180px); min-width: 0; }
+}
 </style>

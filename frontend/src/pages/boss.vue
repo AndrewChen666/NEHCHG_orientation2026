@@ -201,5 +201,14 @@ function demoSnapshot(): GameSnapshot { return { session: { id: 'demo-session', 
 .is-failed { color: var(--color-danger); }
 .board-message { grid-column: 1 / -1; display: flex; align-items: center; gap: 7px; margin: -4px 0 0; color: var(--color-success); font-size: 11px; }
 .board-message.is-error { color: var(--color-danger); }
-@media (max-width: 760px) { .boss-board { height: auto; grid-template-columns: 1fr; grid-template-rows: auto; } .boss-history { grid-column: auto; } .field-board { height: auto; } .board-primary-action { margin-top: 14px; } .history-strip { overflow-x: auto; padding-bottom: 2px; } }
+@media (max-width: 760px) { .boss-board { height: auto; grid-template-columns: 1fr; grid-template-rows: auto; } .boss-history { grid-column: auto; } .field-board { height: auto; } .board-primary-action { margin-top: 14px; } .history-strip { overflow-x: auto; padding-bottom: 2px; } .board-panel__head { align-items: flex-start; } }
+@media (max-width: 560px) {
+  .board-panel__head { flex-direction: column; }
+  .board-panel__head > .status-badge { align-self: flex-start; }
+  .question-strip { grid-template-columns: 1fr; }
+  .question-strip b { justify-self: start; }
+  .check-grid { grid-template-columns: 1fr; }
+  .fast-actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .fast-actions .action-button, .fast-actions .ghost-button { min-width: 0; padding-inline: 7px; font-size: 11px; }
+}
 </style>

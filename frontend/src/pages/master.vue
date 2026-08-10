@@ -220,5 +220,14 @@ function demoBoard(): MarketBoard { const config = cloneDefaultConfig(); const m
 .failure-message.is-error { color: var(--color-danger); }
 .failure-submit { width: 100%; min-height: 44px; margin-top: auto; font-size: 13px; }
 @media (max-width: 900px) { .master-main { grid-template-columns: 1fr; } .field-board { height: auto; } }
-@media (max-width: 560px) { .master-owner { grid-template-columns: 1fr; align-items: stretch; } .master-owner__meta { justify-content: space-between; } .owner-duration { text-align: left; } }
+@media (max-width: 760px) { .master-owner { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) auto; } .master-owner__meta { min-width: 0; } .owner-duration { min-width: 0; } }
+@media (max-width: 560px) {
+  .master-owner { grid-template-columns: 1fr; align-items: stretch; }
+  .master-owner__meta { justify-content: space-between; white-space: normal; }
+  .owner-duration { text-align: left; }
+  .trade-controls { grid-template-columns: 1fr; }
+  .compact-checks { grid-template-columns: 1fr; }
+  .board-panel__head { flex-direction: column; }
+  .board-panel__head > .status-badge { align-self: flex-start; }
+}
 </style>

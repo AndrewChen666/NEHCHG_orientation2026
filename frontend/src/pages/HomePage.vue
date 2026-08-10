@@ -361,6 +361,23 @@ async function loadPublicHome() {
   .house-plaque__name { font-size: 18px; }
   .home-footer { align-items: start; flex-direction: column; width: min(100% - 40px, 540px); }
 }
+@media (max-width: 480px) {
+  .home-header { padding-inline: 16px; }
+  .home-brand { gap: 8px; }
+  .home-brand__copy strong { font-size: 14px; }
+  .home-brand__copy small { font-size: 8px; letter-spacing: .12em; }
+  .home-header__login { padding-inline: 8px; }
+  .home-hero { min-height: 720px; padding-inline: 20px; }
+  .home-hero h1 { font-size: clamp(27px, 8.5vw, 40px); }
+  .home-hero h1 span, .home-hero h1 em { white-space: normal; overflow-wrap: anywhere; }
+  .home-hero__actions { align-items: stretch; flex-direction: column; gap: 14px; }
+  .brass-button { justify-content: space-between; width: min(100%, 280px); }
+  .home-section { width: min(100% - 32px, 540px); padding-block: 64px; }
+  .home-section__heading { flex-direction: column; align-items: flex-start; margin-bottom: 24px; }
+  .home-section__heading > p { margin-left: 0; }
+  .home-section__count { margin-top: -4px; }
+  .home-footer { width: min(100% - 32px, 540px); padding-bottom: max(30px, calc(30px + env(safe-area-inset-bottom))); }
+}
 @media (prefers-reduced-motion: reduce) {
   .home-skip-link, .home-nav a, .home-header__login, .brass-button, .quiet-link, .schedule-table tbody tr, .house-plaque, .home-section { transition: none; }
   .home-hero__stars, .home-hero__stars::before, .home-hero__stars::after, .home-hero__image, .home-hero__seal { animation: none; }
