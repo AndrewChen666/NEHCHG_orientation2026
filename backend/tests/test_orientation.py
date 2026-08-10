@@ -11,6 +11,7 @@ from app.activity import effective_elapsed_ms, stage_is_current
 from app.config import Settings
 from app.dependencies import get_auth_context
 from app.routers.auth import _verify_google_credential
+from app.schemas import GoogleLoginRequest
 from app.routers.orientation import RoleAssignmentInput, ScoreEventRequest, StageBatchRequest
 from app.security import AuthContext, create_session_token, decode_session_token
 
@@ -69,6 +70,10 @@ class GoogleIdentityTest(TestCase):
         with self.assertRaises(HTTPException) as error:
             _verify_google_credential("x" * 32, self.settings)
         self.assertEqual(error.exception.detail["code"], "GOOGLE_ISSUER_INVALID")
+
+    def test_google_login_request_can_omit_session_id(self):
+        request = GoogleLoginRequest(credential="x" * 32)
+        self.assertIsNone(request.session_id)
 
 
 class AuthTokenTest(TestCase):

@@ -111,6 +111,22 @@ async def _ensure_google_actor(connection, session_id, stage, participant, assig
     )
 
 
+async def _resolve_session_id(connection, requested_session_id):
+    """Resolve the single application session when the client omits its UUID."""
+    if requested_session_id is not None:
+        return requested_session_id
+
+    session_id = await connection.fetchval(
+        "SELECT id FROM game_sessions ORDER BY created_at DESC LIMIT 1"
+    )
+    if session_id is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NO_GAME_SESSION", "message": "目前尚未建立活動場次。"},
+        )
+    return session_id
+
+
 @router.post("/google", response_model=LoginResponse)
 async def google_login(
     payload: GoogleLoginRequest,
@@ -123,6 +139,7 @@ async def google_login(
 
     async with pool.acquire() as connection:
         async with connection.transaction():
+            session_id = await _resolve_session_id(connection, payload.session_id)
             participant = await connection.fetchrow(
                 """
                 SELECT id, participant_no, display_name, email, google_subject, college_id, team_id
@@ -130,7 +147,7 @@ async def google_login(
                 WHERE session_id = $1 AND LOWER(email) = $2 AND active = TRUE
                 FOR UPDATE
                 """,
-                payload.session_id,
+                session_id,
                 email,
             )
             if participant is None:
@@ -146,7 +163,7 @@ async def google_login(
                 participant = dict(participant)
                 participant["google_subject"] = google_subject
 
-            stage = await get_current_stage(connection, payload.session_id)
+            stage = await get_current_stage(connection, session_id)
             if stage is None:
                 raise HTTPException(status_code=409, detail={"code": "NO_ACTIVITY_STAGE", "message": "本場次尚未建立活動階段。"})
             assignments = await connection.fetch(
@@ -156,7 +173,7 @@ async def google_login(
                 WHERE session_id = $1 AND stage_id = $2 AND participant_id = $3 AND active = TRUE
                 ORDER BY id
                 """,
-                payload.session_id,
+                session_id,
                 stage["id"],
                 participant["id"],
             )
@@ -167,7 +184,7 @@ async def google_login(
                     VALUES ($1, $2, $3, 'participant', 'session')
                     RETURNING id, role, team_id, market_id, college_id
                     """,
-                    payload.session_id,
+                    session_id,
                     stage["id"],
                     participant["id"],
                 )
@@ -176,11 +193,11 @@ async def google_login(
             if assignment is None:
                 raise HTTPException(status_code=403, detail={"code": "REQUESTED_ROLE_UNAVAILABLE", "message": "目前階段沒有指定的活動身分。"})
 
-            actor_id = await _ensure_google_actor(connection, payload.session_id, stage, participant, assignment)
+            actor_id = await _ensure_google_actor(connection, session_id, stage, participant, assignment)
             roles = tuple(dict.fromkeys(str(item["role"]) for item in assignments))
             context = AuthContext(
                 access_id=actor_id,
-                session_id=payload.session_id,
+                session_id=session_id,
                 role=assignment["role"],
                 team_id=assignment["team_id"],
                 market_id=assignment["market_id"],

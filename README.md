@@ -13,10 +13,10 @@
 ## 啟動順序
 
 1. 在 Supabase 依序執行 `backend/migrations/001_initial_schema.sql`、`003_manual_market_operations.sql`、`004_magic_boss_role.sql`、`005_editable_product_identifiers.sql`、`006_team_profiles.sql`、`007_public_team_profiles.sql`、`008_orientation_identity_activity.sql`、`009_disable_legacy_passwords.sql`。
-2. 在 Google Cloud Console 建立 Web OAuth Client ID，將同一個 ID 填入 `backend/.env` 的 `GOOGLE_CLIENT_ID`／`GOOGLE_ALLOWED_CLIENT_IDS` 與 `frontend/.env` 的 `VITE_GOOGLE_CLIENT_ID`；再填入 `DATABASE_URL` 與 `SESSION_SECRET`。
+2. 在 Google Cloud Console 建立 Web OAuth Client ID，將同一個 ID 填入 `backend/.env` 的 `GOOGLE_CLIENT_ID`／`GOOGLE_ALLOWED_CLIENT_IDS` 與 `frontend/.env` 的 `VITE_GOOGLE_CLIENT_ID`；再填入 `DATABASE_URL` 與 `SESSION_SECRET`。OAuth Client 的「已授權的 JavaScript 來源」需包含 `http://localhost:5175`；若直接用 IP 開啟，也加入 `http://127.0.0.1:5175`。
 3. 依 `backend/README.md` 安裝 Python 依賴並啟動 FastAPI。
 4. 複製 `frontend/.env.example` 為 `frontend/.env`，在 `frontend/` 執行 `npm install`、`npm run dev`。
-5. 使用 `/login` 輸入場次 UUID，再以已匯入白名單的 Google 帳號登入。總召可在 `/admin/activity` 匯入參加者、編排階段、設定倍率與指派身分；隊輔／記分員使用 `/activity`。
+5. 使用 `/login` 以已匯入白名單的 Google 帳號登入；系統目前只使用一個活動場次，不需要輸入場次 UUID。總召可在 `/admin/activity` 匯入參加者、編排階段、設定倍率與指派身分；隊輔／記分員使用 `/activity`。
 
 ## Windows 一鍵啟動
 

@@ -15,8 +15,8 @@ const state = reactive<{ token: string | null; identity: AccessIdentity | null; 
 export function useSession() {
   const isAuthenticated = computed(() => Boolean(state.token && state.identity))
 
-  async function signInGoogle(sessionId: string, credential: string) {
-    const result = await googleLogin(sessionId, credential)
+  async function signInGoogle(credential: string) {
+    const result = await googleLogin(credential)
     state.token = result.token
     state.identity = result.access
     localStorage.setItem(tokenKey, result.token)

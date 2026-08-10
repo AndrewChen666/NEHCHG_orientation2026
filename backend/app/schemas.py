@@ -104,6 +104,6 @@ class ClockActionResponse(BaseModel):
 
 
 class GoogleLoginRequest(BaseModel):
-    session_id: UUID
+    session_id: UUID | None = None
     credential: str = Field(min_length=32, max_length=16_384)
     role: str | None = Field(default=None, min_length=2, max_length=40)

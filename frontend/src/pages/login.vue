@@ -22,13 +22,9 @@
       <div class="login-panel__inner">
         <div class="mobile-brand"><img class="brand-mark" src="/icon.png" alt="" aria-hidden="true" /><strong>NEHCHG MSTC</strong></div>
         <h2>活動工作台登入</h2>
-        <p class="login-lead">輸入活動場次識別，再使用已登記的 Google 帳號進入目前階段。</p>
+        <p class="login-lead">使用已登記的 Google 帳號進入目前活動階段。</p>
 
         <form class="login-form" @submit.prevent="handleGoogleLogin">
-          <label>
-            <span>場次識別</span>
-            <input v-model="sessionId" type="text" placeholder="貼上場次 UUID" autocomplete="off" required />
-          </label>
           <p v-if="errorMessage" class="form-error"><Icon name="alert" size="sm" />{{ errorMessage }}</p>
           <div class="google-login-shell">
             <div v-if="loading" class="google-login-loading">正在驗證 Google 身分…</div>
@@ -56,7 +52,6 @@ import { useSession } from '@/lib/session'
 
 const router = useRouter()
 const { signInGoogle } = useSession()
-const sessionId = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const googleButton = ref<HTMLElement | null>(null)
@@ -72,10 +67,6 @@ function destinationForRole(role: string) {
 }
 
 async function handleGoogleCredential(response: { credential?: string }) {
-  if (!sessionId.value.trim()) {
-    errorMessage.value = '請先輸入活動場次 UUID。'
-    return
-  }
   if (!response.credential) {
     errorMessage.value = 'Google 沒有回傳有效身分，請再試一次。'
     return
@@ -83,10 +74,10 @@ async function handleGoogleCredential(response: { credential?: string }) {
   loading.value = true
   errorMessage.value = ''
   try {
-    const identity = await signInGoogle(sessionId.value.trim(), response.credential)
+    const identity = await signInGoogle(response.credential)
     await router.push(destinationForRole(identity.role))
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : '目前無法連線，請確認場次 UUID 或稍後再試。'
+    errorMessage.value = error instanceof ApiError ? error.message : '目前無法連線，請稍後再試。'
   } finally {
     loading.value = false
   }

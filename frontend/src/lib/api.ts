@@ -41,10 +41,10 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
   return body as T
 }
 
-export async function googleLogin(sessionId: string, credential: string, role?: Role) {
+export async function googleLogin(credential: string, role?: Role) {
   return request<{ access: AccessIdentity; token: string }>('/api/v1/auth/google', {
     method: 'POST',
-    body: JSON.stringify({ session_id: sessionId, credential, role }),
+    body: JSON.stringify({ credential, role }),
   })
 }
 
