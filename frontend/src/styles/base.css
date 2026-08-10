@@ -200,6 +200,18 @@ h1, h2, h3 { text-wrap: balance; }
 .icon--lg { width: 24px; height: 24px; }
 .spell-note { position: fixed; right: 24px; bottom: 24px; z-index: var(--z-toast); max-width: min(320px, calc(100vw - 48px)); margin: 0; padding: 11px 14px; color: oklch(0.94 0.018 90); background: var(--color-primary-strong); border: 1px solid oklch(0.73 0.1 78 / .7); border-radius: var(--radius-sm); box-shadow: 0 6px 12px oklch(0.14 0.03 255 / .2); font-size: 12px; line-height: 1.55; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity 180ms ease-out, transform 180ms ease-out; }
 .spell-note.is-visible { opacity: 1; transform: translateY(0); }
+
+/* Shared overflow contract: every field surface may shrink inside the viewport. */
+html, body, #app { width: 100%; max-width: 100%; }
+.page-wrap, .page-content, .page-content > * { max-width: 100%; }
+.section-block__head > div,
+.section-block__head p,
+.notice > span,
+.event-item > div,
+.market-row__name > div { overflow-wrap: anywhere; }
+.notice > span { min-width: 0; }
+.data-table-scroll { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
+.data-table-scroll > .data-table { min-width: 0; }
 .app-frame.is-astral .side-rail::after { animation: constellation-reveal 1.6s ease-out; }
 .app-frame.is-astral .brand-mark { animation: seal-awaken 900ms ease-out; }
 .app-frame.is-astral .main-stage::before { animation: horizon-glow 1.6s ease-out; }
@@ -491,4 +503,89 @@ h1, h2, h3 { text-wrap: balance; }
   .form-field input,
   .form-field select,
   .form-field textarea { touch-action: manipulation; }
+}
+
+/* Final responsive contract: every field screen must remain usable on a
+   narrow phone, a portrait tablet, and a landscape tablet. Keep this layer
+   at the end so page-specific styles can opt into a different composition
+   without reintroducing horizontal overflow. */
+img, svg, video, canvas { max-width: 100%; }
+.app-frame, .main-stage, .topbar, .page-wrap, .page-content,
+.page-content > *, .section-block, .board-panel { min-width: 0; }
+.app-frame, .main-stage, .page-wrap, .page-content { width: 100%; max-width: 100%; }
+.page-content > * { width: 100%; }
+.topbar-brand, .topbar-actions, .top-nav, .section-block__head > div,
+.market-row__name, .team-cell, .event-item > div { min-width: 0; }
+.event-time { justify-self: end; white-space: nowrap; }
+.topbar-status { max-width: 100%; }
+.stat-item__topline, .stat-item__value-row { min-width: 0; }
+.stat-item__topline > span { min-width: 0; }
+.stat-item__topline .live-mark { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-nav { scrollbar-width: none; }
+.top-nav::-webkit-scrollbar { display: none; }
+.data-table, .market-price-table, .setup-rate-table { font-variant-numeric: tabular-nums; }
+.section-block:has(> .data-table),
+.market-table-wrap,
+.rate-table-wrap,
+.map-stage-frame { -webkit-overflow-scrolling: touch; }
+.data-table td, .data-table th,
+.market-price-table td, .market-price-table th,
+.setup-rate-table td, .setup-rate-table th { overflow-wrap: anywhere; }
+
+@media (max-width: 1023px) {
+  .page-wrap { width: 100%; }
+  .section-block__head > div { max-width: 100%; }
+  .two-column, .workspace-grid, .master-main, .map-layout { min-width: 0; }
+}
+
+@media (max-width: 760px) {
+  body { overflow-x: clip; }
+  .topbar-brand { flex: 1 1 min(100%, 220px); }
+  .topbar-brand .brand-lockup { min-width: 0; }
+  .brand-lockup__text { min-width: 0; }
+  .brand-lockup__text strong, .brand-lockup__text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-actions { width: 100%; min-width: 0; }
+  .topbar-actions > .action-button, .topbar-actions > .ghost-button,
+  .topbar-actions > .topbar-exit { min-width: 0; }
+  .top-nav { max-width: 100%; }
+  .heading-actions { min-width: 0; }
+  .heading-actions > * { min-width: 0; }
+  .section-block__head > div { width: auto; flex: 1 1 220px; }
+  .section-block__head > .status-badge,
+  .section-block__head > .icon { flex: 0 0 auto; }
+  .notice { min-width: 0; }
+  .notice > span { min-width: 0; overflow-wrap: anywhere; }
+  .form-field input, .form-field select, .form-field textarea,
+  .action-button, .ghost-button { min-height: 44px; }
+  .text-button { min-height: 44px; padding-block: 8px; }
+  .data-table { min-width: 0; }
+}
+
+@media (max-width: 480px) {
+  html { font-size: 16px; }
+  .topbar { padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)); }
+  .page-wrap, .app-frame.is-ceremonial .page-wrap {
+    padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+  }
+  .topbar-brand { flex-basis: 100%; }
+  .topbar-actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .topbar-status { grid-column: 1 / -1; }
+  .page-heading h1 { font-size: 22px; line-height: 1.25; }
+  .section-block__head h2 { line-height: 1.35; }
+  .stat-item { min-width: 0; }
+  .stat-grid { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+  .stat-item__topline, .stat-item__value-row { align-items: flex-start; flex-wrap: wrap; }
+  .stat-item__value-row { gap: 3px 8px; }
+  .stat-item strong { overflow-wrap: anywhere; }
+  .event-item { grid-template-columns: 28px minmax(0, 1fr); }
+  .event-time { grid-column: 2; justify-self: start; }
+}
+
+@media (pointer: coarse) {
+  .map-marker { min-width: 48px; min-height: 48px; }
+  .setup-tab, .period-tab, .target-tabs button, .leaderboard-tabs button { min-height: 44px; }
+}
+
+@media (max-width: 560px) {
+  .stat-grid { grid-template-columns: minmax(0, 1fr); min-width: 0; }
 }

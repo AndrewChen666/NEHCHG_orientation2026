@@ -61,9 +61,10 @@ function displayPrice(value?: number | null) {
 .price-line:first-child strong { color: var(--color-primary-ink); }
 .price-line:last-child strong { color: var(--color-success); }
 .price-cell.is-unavailable .price-line strong { color: var(--color-muted); font-weight: 600; }
-.market-table-note { display: flex; align-items: center; gap: 6px; margin-top: 9px; color: var(--color-muted); font-size: 10px; }
+.market-table-note { display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 9px; color: var(--color-muted); font-size: 10px; overflow-wrap: anywhere; }
 .market-table-note .icon { flex: 0 0 auto; color: var(--color-primary); }
 .board-empty--short { min-height: 70px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-@media (max-width: 560px) { .market-table-wrap { width: calc(100% + 28px); margin-inline: -14px; border-width: 1px 0; border-radius: 0; } .market-price-table { min-width: 840px; } .market-table-note { align-items: flex-start; line-height: 1.5; } }
+@media (max-width: 1023px) { .market-price-table { width: 920px; min-width: 920px; } }
+@media (max-width: 560px) { .market-table-wrap { width: calc(100% + 28px); margin-inline: -14px; border-width: 1px 0; border-radius: 0; } .market-price-table { width: 920px; min-width: 920px; } .market-table-note { align-items: flex-start; line-height: 1.5; } }
 </style>

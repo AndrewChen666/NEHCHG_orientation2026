@@ -230,4 +230,7 @@ function demoBoard(): MarketBoard { const config = cloneDefaultConfig(); const m
   .board-panel__head { flex-direction: column; }
   .board-panel__head > .status-badge { align-self: flex-start; }
 }
+@media (max-width: 560px) {
+  .direction-switch { grid-template-columns: minmax(0, 1fr); }
+}
 </style>

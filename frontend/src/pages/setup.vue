@@ -333,7 +333,7 @@ function demoSetup(): SetupSnapshot {
 </script>
 
 <style scoped>
-.setup-tabs-shell { margin-bottom: 16px; padding-top: 10px; border-bottom: 1px solid var(--color-border); }
+.setup-tabs-shell { width: 100%; max-width: 100%; min-width: 0; margin-bottom: 16px; padding-top: 10px; border-bottom: 1px solid var(--color-border); }
 .setup-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 1px; scrollbar-width: thin; }
 .setup-tab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; flex: 1 0 145px; min-height: 61px; padding: 10px 12px; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-border); border-bottom: 1px solid transparent; border-radius: var(--radius-sm) var(--radius-sm) 0 0; text-align: left; transition: color 160ms ease-out, background 160ms ease-out, border-color 160ms ease-out; }
 .setup-tab:hover { color: var(--color-primary); background: var(--color-primary-soft); border-color: oklch(0.7 0.07 255 / .48); }
@@ -388,10 +388,10 @@ function demoSetup(): SetupSnapshot {
 .setup-row--market { grid-template-columns: 38px minmax(0, 1fr) 68px 68px; align-items: end; }
 .setup-select { min-height: 36px; padding: 0 10px; color: var(--color-ink); background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 12px; }
 .rates-editor { display: grid; gap: 14px; min-width: 0; }
-.rate-summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 14px; color: var(--color-muted); font-size: 11px; text-align: right; }
+.rate-summary { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; gap: 6px 14px; min-width: 0; color: var(--color-muted); font-size: 11px; text-align: right; }
 .rate-summary strong { color: var(--color-primary); font-size: 15px; font-variant-numeric: tabular-nums; }
-.rates-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
-.period-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.rates-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; min-width: 0; }
+.period-tabs { display: flex; flex: 1 1 auto; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .period-tab { display: grid; gap: 3px; min-width: 96px; min-height: 46px; padding: 7px 10px; color: var(--color-ink); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); text-align: left; transition: color 160ms ease-out, background 160ms ease-out, border-color 160ms ease-out, transform 160ms ease-out; }
 .period-tab:hover { border-color: var(--color-primary); background: var(--color-primary-soft); transform: translateY(-1px); }
 .period-tab span { font-size: 13px; font-weight: 800; }
@@ -430,6 +430,7 @@ function demoSetup(): SetupSnapshot {
 .toggle-field { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; color: var(--color-muted); font-size: 12px; white-space: nowrap; }
 .toggle-field input { width: 16px; height: 16px; accent-color: var(--color-primary); }
 @media (max-width: 1040px) { .setup-row--assets { grid-template-columns: 30px minmax(120px, 1fr) 80px repeat(4, 58px); } .team-profile-grid { grid-template-columns: 1fr; } .rules-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .setup-rate-table { width: 860px; min-width: 860px; } }
 @media (max-width: 760px) { .setup-tabs-shell { padding-top: 8px; } .setup-tab { flex-basis: 138px; } .product-config-grid { grid-template-columns: 1fr; } .product-config-fields { grid-template-columns: 1fr 1fr; } .product-config-fields .form-field:first-child, .product-config-fields .form-field:nth-child(2) { grid-column: 1 / -1; } .team-profile-fields { grid-template-columns: 1fr 1fr; } .team-profile-card__assets { grid-template-columns: repeat(2, minmax(0, 1fr)); } .setup-row--assets { grid-template-columns: 30px minmax(0, 1fr) 88px; } .setup-row--assets .form-field:nth-child(n + 4) { grid-column: 2 / span 2; } .setup-row--market { grid-template-columns: 30px minmax(0, 1fr) 64px 64px; } .rate-summary { justify-content: flex-start; text-align: left; } .rates-toolbar { align-items: stretch; flex-direction: column; } .period-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .period-tab { min-width: 0; } .market-filter { min-width: 0; } .rate-table-wrap { width: calc(100% + 36px); max-width: none; margin-inline: -18px; border-width: 1px 0; border-radius: 0; } .setup-rate-table { min-width: 860px; } }
 @media (max-width: 480px) {
   .setup-tab { flex-basis: 132px; min-height: 58px; }

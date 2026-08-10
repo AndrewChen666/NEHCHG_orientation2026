@@ -31,9 +31,11 @@
     <div class="two-column">
       <section class="section-block leaderboard-panel">
         <div class="section-block__head"><div><h2>隊伍金幣排行</h2><p>即時同步・依目前金錢袋排序</p></div><button class="text-button" type="button">查看完整榜單 →</button></div>
-        <table class="data-table"><thead><tr><th>隊伍</th><th>金幣</th><th>資產趨勢</th><th>狀態</th></tr></thead><tbody>
-          <tr v-for="team in teams" :key="team.number"><td data-label="隊伍"><div class="team-cell"><span class="team-badge">{{ team.number }}</span><div><strong>{{ team.name }}</strong><span>{{ team.note }}</span></div></div></td><td data-label="金幣" class="money-value">{{ team.money.toLocaleString() }}</td><td data-label="資產趨勢"><div class="rank-bar"><span :style="{ width: `${team.ratio}%` }" /></div></td><td data-label="狀態"><span class="status-badge" :class="team.statusClass">{{ team.status }}</span></td></tr>
-        </tbody></table>
+        <div class="data-table-scroll">
+          <table class="data-table"><thead><tr><th>隊伍</th><th>金幣</th><th>資產趨勢</th><th>狀態</th></tr></thead><tbody>
+            <tr v-for="team in teams" :key="team.number"><td data-label="隊伍"><div class="team-cell"><span class="team-badge">{{ team.number }}</span><div><strong>{{ team.name }}</strong><span>{{ team.note }}</span></div></div></td><td data-label="金幣" class="money-value">{{ team.money.toLocaleString() }}</td><td data-label="資產趨勢"><div class="rank-bar"><span :style="{ width: `${team.ratio}%` }" /></div></td><td data-label="狀態"><span class="status-badge" :class="team.statusClass">{{ team.status }}</span></td></tr>
+          </tbody></table>
+        </div>
       </section>
       <section class="section-block events-panel"><div class="section-block__head"><div><h2>最新事件</h2><p>所有操作均保留紀錄</p></div><span class="status-badge is-success">即時</span></div><div class="event-list">
         <div v-for="event in events" :key="event.title" class="event-item" :class="`is-${event.tone}`"><span class="event-icon"><Icon :name="event.icon" size="sm" /></span><div><strong>{{ event.title }}</strong><span>{{ event.detail }}</span></div><span class="event-time">{{ event.time }}</span></div>
@@ -81,7 +83,7 @@ const goLogin = () => router.push('/login')
 <style scoped>
 .magic-owner-note { margin-top: 24px; }
 .quick-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.leaderboard-panel :deep(.data-table) { min-width: 0; }
+.leaderboard-panel :deep(.data-table), .leaderboard-panel :deep(.data-table-scroll) { min-width: 0; }
 @media (max-width: 560px) {
   .quick-action-grid { grid-template-columns: 1fr; }
   .leaderboard-panel :deep(.data-table),

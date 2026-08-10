@@ -121,7 +121,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.login-page { --login-bg: oklch(.1 .04 255); --login-ink: oklch(.91 .025 90); --login-muted: oklch(.72 .03 255); --login-accent: oklch(.78 .14 80); display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(390px, .8fr); min-height: 100vh; color: var(--login-ink); background: var(--login-bg); }
+.login-page { --login-bg: oklch(.1 .04 255); --login-ink: oklch(.91 .025 90); --login-muted: oklch(.72 .03 255); --login-accent: oklch(.78 .14 80); display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(390px, .8fr); width: 100%; max-width: 100%; min-height: 100vh; min-height: 100svh; color: var(--login-ink); background: var(--login-bg); overflow-x: clip; }
 .login-art { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 100vh; padding: 32px clamp(28px, 7vw, 100px); overflow: hidden; isolation: isolate; background: radial-gradient(circle at 62% 34%, oklch(.3 .13 259 / .72), transparent 30rem), var(--login-bg); }
 .login-art::before { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, var(--login-bg) 0%, transparent 46%), linear-gradient(0deg, var(--login-bg) 0%, transparent 42%), url('/orientation-hero.jpg') 63% 42% / cover no-repeat; content: ''; opacity: .72; mix-blend-mode: screen; filter: saturate(.78) contrast(1.08); }
 .login-art::after { position: absolute; right: 9%; bottom: 17%; width: 210px; height: 210px; border: 1px solid oklch(.78 .14 80 / .28); border-radius: 50%; box-shadow: 0 0 0 18px oklch(.78 .14 80 / .08), 0 0 0 36px oklch(.78 .14 80 / .04); content: ''; }
@@ -167,15 +167,15 @@ onBeforeUnmount(() => {
 .login-submit { width: 100%; min-height: 49px; justify-content: space-between; margin-top: 4px; padding-inline: 18px; color: var(--login-bg); background: var(--login-accent); border-color: var(--login-accent); border-radius: 0; }
 .login-submit:hover { color: var(--login-bg); background: oklch(.85 .13 80); }
 .login-submit:disabled { cursor: wait; opacity: .65; }
-.google-login-shell { display: grid; min-height: 44px; place-items: center; }
-.google-login-shell > div { width: 100%; }
-.google-login-shell :deep(iframe) { max-width: 100%; }
+.google-login-shell { display: grid; width: 100%; min-height: 44px; place-items: center; overflow: hidden; }
+.google-login-shell > div, .google-login-shell :deep(#google-login-button) { width: 100%; max-width: 100%; }
+.google-login-shell :deep(iframe) { display: block; width: 100% !important; max-width: 100%; }
 .google-login-loading { color: var(--login-muted); font-size: 12px; text-align: center; }
 .login-help { display: flex; gap: 9px; margin-top: 30px; padding-top: 20px; color: var(--login-muted); border-top: 1px solid oklch(.78 .14 80 / .22); font-size: 11px; line-height: 1.6; }
 .login-help .icon { flex: 0 0 auto; color: var(--login-accent); }
 .demo-note { margin-top: 24px; color: oklch(.62 .03 255); font-size: 10px; line-height: 1.6; }
 @media (max-width: 820px) {
-  .login-page { display: block; }
+  .login-page { display: flex; flex-direction: column; }
   .login-art { min-height: 610px; padding: 25px 24px 35px; }
   .login-art::before { background-position: center, center, 59% 37%; opacity: .62; }
   .login-art__copy { margin: 94px 0 30px; }
@@ -184,7 +184,8 @@ onBeforeUnmount(() => {
   .login-art__ledger { gap: 10px; }
   .login-art__ledger strong { font-size: 10px; }
   .login-art__seal, .login-art__astral { display: none; }
-  .login-panel { display: block; min-height: 540px; padding: 70px 24px 80px; border-top: 1px solid oklch(.78 .14 80 / .28); border-left: 0; }
+  .login-panel { order: 1; display: block; min-height: 540px; padding: 70px 24px 80px; border-top: 1px solid oklch(.78 .14 80 / .28); border-left: 0; }
+  .login-art { order: 2; }
   .login-panel::before, .login-panel::after { display: none; }
   .mobile-brand { display: flex; }
 }
@@ -222,6 +223,13 @@ onBeforeUnmount(() => {
   .login-art__copy h1 span, .login-art__copy h1 em { white-space: normal; overflow-wrap: anywhere; }
   .login-art__copy p { margin-top: 12px; font-size: 12px; }
   .login-art__ledger { display: none; }
+}
+@media (max-width: 420px) {
+  .login-panel { padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right)); }
+  .login-panel h2 { font-size: 28px; }
+  .login-lead { font-size: 12px; }
+  .login-help { align-items: flex-start; }
+  .login-art { padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right)); }
 }
 @media (prefers-reduced-motion: reduce) { .login-form input, .login-submit { transition: none; } }
 </style>
