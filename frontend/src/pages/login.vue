@@ -159,5 +159,24 @@ async function handleSubmit() {
   .login-form input { min-height: 52px; font-size: 16px; }
   .login-help { margin-top: 26px; }
 }
+@media (max-width: 680px) {
+  .login-page { display: flex; min-height: 100svh; flex-direction: column; }
+  .login-panel { order: 1; min-height: auto; padding: max(28px, env(safe-area-inset-top)) 20px max(42px, calc(34px + env(safe-area-inset-bottom))); border: 0; }
+  .login-panel__inner { width: min(100%, 420px); margin-inline: auto; }
+  .mobile-brand { margin-bottom: 24px; }
+  .login-panel h2 { margin-top: 0; font-size: 30px; line-height: 1.15; }
+  .login-lead { max-width: 34ch; margin-top: 10px; }
+  .login-form { gap: 16px; margin-top: 26px; }
+  .login-form input { min-height: 52px; font-size: 16px; }
+  .login-help { margin-top: 24px; }
+  .login-art { order: 2; min-height: 240px; padding: 26px 20px 40px; }
+  .login-art::after, .login-art__seal, .login-art__astral { display: none; }
+  .login-art__topline { font-size: 9px; }
+  .login-art__copy { max-width: 340px; margin: 28px 0 0; }
+  .login-art__copy h1 { margin-top: 0; font-size: clamp(34px, 10vw, 48px); line-height: 1.05; }
+  .login-art__copy h1 span, .login-art__copy h1 em { white-space: normal; overflow-wrap: anywhere; }
+  .login-art__copy p { margin-top: 12px; font-size: 12px; }
+  .login-art__ledger { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .login-form input, .login-submit { transition: none; } }
 </style>

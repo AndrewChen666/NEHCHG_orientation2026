@@ -367,18 +367,26 @@ async function loadPublicHome() {
   .home-footer { align-items: start; flex-direction: column; width: min(100% - 40px, 540px); }
 }
 @media (max-width: 480px) {
-  .home-header { padding-inline: 16px; }
+  .home-header { position: sticky; top: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; padding: 10px 16px; }
   .home-brand { gap: 8px; }
   .home-brand__copy strong { font-size: 14px; }
   .home-brand__copy small { font-size: 8px; letter-spacing: .12em; }
+  .home-menu-toggle { margin-left: 0; }
   .home-header__login { padding-inline: 8px; }
-  .home-hero { min-height: 720px; padding-inline: 20px; }
-  .home-hero::before { top: 96px; height: 420px; background: linear-gradient(90deg, var(--home-bg) 0%, oklch(.1 .04 255 / .96) 66%, oklch(.1 .04 255 / .24) 100%); }
-  .home-hero__visual { top: 278px; right: -144px; left: 108px; min-height: 500px; opacity: .42; }
-  .home-hero h1 { font-size: clamp(27px, 8.5vw, 40px); }
+  .home-nav { top: 100%; width: 100%; }
+  .home-hero { display: flex; min-height: auto; flex-direction: column; padding: 42px 20px 0; }
+  .home-hero::before { display: none; }
+  .home-hero__copy { max-width: none; padding: 0; }
+  .home-hero h1 { max-width: 11ch; margin-top: 18px; font-size: clamp(34px, 10vw, 46px); line-height: 1.08; }
   .home-hero h1 span, .home-hero h1 em { white-space: normal; overflow-wrap: anywhere; }
-  .home-hero__actions { align-items: stretch; flex-direction: column; gap: 14px; }
+  .home-hero__intro { margin-top: 22px; }
+  .home-hero__actions { align-items: flex-start; flex-direction: column; gap: 14px; margin-top: 28px; }
   .brass-button { justify-content: space-between; width: min(100%, 280px); }
+  .home-hero__visual { position: relative; inset: auto; order: 2; width: calc(100% + 40px); height: 360px; min-height: 360px; margin: 34px -20px 0; opacity: 1; }
+  .home-hero__visual::after { background: linear-gradient(180deg, var(--home-bg) 0%, oklch(.1 .04 255 / .06) 25%, oklch(.1 .04 255 / .82) 100%); }
+  .home-hero__image { inset: 0; width: 100%; height: 100%; object-position: 55% 58%; mix-blend-mode: normal; opacity: .82; transform: none; }
+  .home-hero__seal { right: 9%; bottom: 11%; }
+  .home-hero__meta { position: relative; order: 3; inset: auto; align-self: flex-start; margin: -34px 0 0; padding-bottom: 30px; }
   .home-section { width: min(100% - 32px, 540px); padding-block: 64px; }
   .home-section__heading { flex-direction: column; align-items: flex-start; margin-bottom: 24px; }
   .home-section__heading > p { margin-left: 0; }
