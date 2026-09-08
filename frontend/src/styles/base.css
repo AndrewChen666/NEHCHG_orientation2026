@@ -12,7 +12,7 @@
 html, body, #app { min-height: 100%; margin: 0; }
 html { scroll-behavior: smooth; scroll-padding-top: 24px; }
 body {
-  min-width: 320px;
+  min-width: 0;
   overflow-x: hidden;
   background: var(--color-bg);
 }
@@ -513,6 +513,8 @@ img, svg, video, canvas { max-width: 100%; }
 .app-frame, .main-stage, .topbar, .page-wrap, .page-content,
 .page-content > *, .section-block, .board-panel { min-width: 0; }
 .app-frame, .main-stage, .page-wrap, .page-content { width: 100%; max-width: 100%; }
+.page-wrap { width: min(100%, 1500px); max-width: 1500px; }
+.app-frame.is-ceremonial .page-wrap { width: min(100%, 1600px); max-width: 1600px; }
 .page-content > * { width: 100%; }
 .topbar-brand, .topbar-actions, .top-nav, .section-block__head > div,
 .market-row__name, .team-cell, .event-item > div { min-width: 0; }
@@ -533,7 +535,7 @@ img, svg, video, canvas { max-width: 100%; }
 .setup-rate-table td, .setup-rate-table th { overflow-wrap: anywhere; }
 
 @media (max-width: 1023px) {
-  .page-wrap { width: 100%; }
+  .page-wrap, .app-frame.is-ceremonial .page-wrap { width: 100%; max-width: 100%; }
   .section-block__head > div { max-width: 100%; }
   .two-column, .workspace-grid, .master-main, .map-layout { min-width: 0; }
 }

@@ -25,7 +25,7 @@
         <div class="home-hero__stars" aria-hidden="true"></div>
         <div class="home-hero__copy">
           <span class="home-kicker">LUMOS · NEHCHG MSTC</span>
-          <h1 id="hero-title"><span>「實」「沂」之「嶺」</span><em>一起放肆｜《Lumos》</em></h1>
+          <h1 id="hero-title"><span>「實」「沂」<br class="home-hero__mobile-break" />之「嶺」</span><em>一起放肆<br class="home-hero__mobile-break" />｜《Lumos》</em></h1>
           <p class="home-hero__intro">聯合迎新<br />2026 / 09 / 12</p>
           <div class="home-hero__actions">
             <a class="brass-button" href="#events" @click.prevent="scrollToSection('#events')">查看活動時間表 <span aria-hidden="true">↓</span></a>
@@ -150,6 +150,7 @@ async function loadPublicHome() {
 
 <style scoped>
 .home-page { --home-bg: oklch(.1 .04 255); --home-ink: oklch(.91 .025 90); --home-muted: oklch(.72 .03 255); --home-accent: oklch(.78 .14 80); --home-line: oklch(.78 .14 80 / .22); --home-line-strong: oklch(.78 .14 80 / .62); width: 100%; max-width: 100%; min-height: 100vh; min-height: 100dvh; color: var(--home-ink); background: var(--home-bg); overflow-x: clip; -webkit-tap-highlight-color: oklch(.78 .14 80 / .16); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .home-page [id] { scroll-margin-top: 84px; }
 .home-page :where(a, button) { touch-action: manipulation; }
 .home-skip-link { position: absolute; top: 12px; left: 12px; z-index: 10; padding: 8px 12px; color: var(--home-bg); background: var(--home-accent); transform: translateY(-160%); transition: transform 160ms ease-out; }
@@ -176,6 +177,7 @@ async function loadPublicHome() {
 .home-kicker { display: block; color: var(--home-accent); font-size: 10px; letter-spacing: .2em; }
 .home-hero h1 { margin-top: 20px; color: var(--home-ink); font-family: Georgia, 'Noto Serif TC', serif; font-size: clamp(34px, 4.5vw, 56px); font-weight: 400; line-height: 1.08; letter-spacing: -.035em; text-wrap: balance; text-shadow: 0 2px 0 oklch(0.05 0.02 250 / .28); }
 .home-hero h1 span, .home-hero h1 em { display: block; white-space: nowrap; }
+.home-hero__mobile-break { display: none; }
 .home-hero h1 em, .home-section h2 em { color: var(--home-accent); font-style: normal; }
 .home-hero__intro { max-width: 36ch; margin-top: 26px; color: var(--home-muted); font-size: 15px; line-height: 1.9; }
 .home-hero__actions { display: flex; align-items: center; gap: 24px; margin-top: 34px; }
@@ -408,6 +410,65 @@ async function loadPublicHome() {
   .house-grid { grid-template-columns: 1fr; }
   .house-plaque { min-height: 0; }
 }
+
+/* Final narrow-screen composition: the hero is a reading sequence, not a
+   squeezed desktop split. Keep this above the 1024px content breakpoint so
+   browser zoom and tablet portrait widths cannot reintroduce clipping. */
+@media (max-width: 1024px) {
+  .home-page { --home-gutter: clamp(20px, 6vw, 72px); }
+  .home-header { position: sticky; top: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; width: 100%; max-width: 100%; min-width: 0; min-height: 72px; padding: max(10px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 10px max(20px, env(safe-area-inset-left)); background: oklch(.1 .04 255 / .96); }
+  .home-brand { width: 100%; min-width: 0; gap: 9px; }
+  .home-brand__crest { width: 42px; height: 47px; }
+  .home-brand__copy { display: grid; min-width: 0; gap: 3px; }
+  .home-brand__copy strong, .home-brand__copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .home-brand__copy strong { font-size: 14px; }
+  .home-brand__copy small { font-size: 8px; letter-spacing: .12em; }
+  .home-menu-toggle { display: grid; width: 44px; height: 44px; min-width: 44px; place-content: center; gap: 4px; margin-left: 0; justify-self: end; color: var(--home-accent); background: transparent; border: 1px solid var(--home-line-strong); }
+  .home-menu-toggle i { display: block; width: 16px; height: 1px; background: currentColor; }
+  .home-nav { position: absolute; top: 100%; right: 0; left: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 8px max(20px, env(safe-area-inset-right)) 16px max(20px, env(safe-area-inset-left)); visibility: hidden; background: oklch(.1 .04 255 / .99); border-bottom: 1px solid var(--home-line-strong); opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity 180ms ease-out, transform 220ms ease-out, visibility 0s linear 220ms; }
+  .home-header.is-open .home-nav { visibility: visible; opacity: 1; pointer-events: auto; transform: translateY(0); transition-delay: 0s; }
+  .home-nav a { display: flex; align-items: center; min-height: 44px; padding: 12px 0; border-bottom: 1px solid var(--home-line); }
+  .home-header__login { min-width: 0; min-height: 44px; padding: 0 10px; font-size: 11px; white-space: nowrap; }
+  .home-hero { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; max-width: 100%; min-width: 0; min-height: auto; padding: clamp(42px, 7vw, 80px) var(--home-gutter) 0; }
+  .home-hero::before { display: none; }
+  .home-hero__copy { width: 100%; max-width: 44rem; min-width: 0; padding: 0; }
+  .home-hero h1 { width: 100%; max-width: min(100%, 16ch); min-width: 0; margin-top: 18px; font-size: clamp(34px, 6.4vw, 54px); line-height: 1.12; overflow-wrap: anywhere; }
+  .home-hero h1 span, .home-hero h1 em { white-space: normal; overflow-wrap: anywhere; }
+  .home-hero__mobile-break { display: none; }
+  .home-hero__intro { margin-top: 24px; font-size: 15px; }
+  .home-hero__actions { min-width: 0; align-items: center; flex-wrap: wrap; gap: 14px 18px; margin-top: 28px; }
+  .brass-button { min-height: 52px; width: min(100%, 320px); max-width: 100%; }
+  .home-hero__visual { position: relative; inset: auto; order: 0; width: calc(100% + (var(--home-gutter) * 2)); height: clamp(320px, 48vw, 460px); min-height: 0; margin: 34px calc(var(--home-gutter) * -1) 0; opacity: 1; }
+  .home-hero__image { inset: 0; width: 100%; height: 100%; object-position: 55% 58%; mix-blend-mode: normal; opacity: .82; transform: none; }
+  .home-hero__visual::after { background: linear-gradient(180deg, var(--home-bg) 0%, oklch(.1 .04 255 / .08) 28%, oklch(.1 .04 255 / .9) 100%); }
+  .home-hero__seal { right: var(--home-gutter); bottom: 12%; width: 78px; height: 78px; }
+  .home-hero__seal-icon { width: 40px; height: 40px; }
+  .home-hero__meta { position: relative; inset: auto; align-self: flex-start; margin: -32px 0 0; padding-bottom: clamp(34px, 5vw, 48px); }
+  .home-hero__meta b { display: none; }
+  .home-section { width: min(calc(100% - (var(--home-gutter) * 2)), 920px); max-width: 100%; min-width: 0; padding-block: clamp(64px, 9vw, 88px); }
+  .home-section__heading { flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 30px; }
+  .home-section__rule { display: none; }
+  .home-section__heading > p { margin-left: auto; }
+  .house-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .home-footer { width: min(calc(100% - (var(--home-gutter) * 2)), 920px); }
+}
+
+@media (max-width: 520px) {
+  .home-header { grid-template-columns: minmax(0, 1fr) auto; }
+  .home-header__login { display: none; }
+  .home-hero { padding-top: 38px; }
+  .home-hero h1 { max-width: 100%; font-size: clamp(34px, 10vw, 44px); }
+  .home-hero__mobile-break { display: block; }
+  .home-hero__actions { align-items: stretch; flex-direction: column; }
+  .brass-button { width: 100%; max-width: 320px; }
+  .quiet-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .home-hero__visual { height: 360px; }
+  .home-section { width: calc(100% - 32px); }
+  .home-section__heading { flex-direction: column; align-items: flex-start; }
+  .home-section__heading > p { margin-left: 0; }
+  .home-footer { width: calc(100% - 32px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-skip-link, .home-nav a, .home-header__login, .brass-button, .quiet-link, .schedule-table tbody tr, .house-plaque, .home-section { transition: none; }
   .home-hero__stars, .home-hero__stars::before, .home-hero__stars::after, .home-hero__image, .home-hero__seal { animation: none; }

@@ -36,7 +36,6 @@
           <Icon name="spark" size="sm" />
           <span>找不到活動身分？請向總召確認 email 已加入本場次名單。</span>
         </div>
-        <p class="demo-note">Google 登入只會傳送短期身分憑證，系統不保存 Google 密碼。</p>
       </div>
     </section>
   </main>
