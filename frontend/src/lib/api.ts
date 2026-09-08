@@ -70,6 +70,13 @@ export async function updateClock(sessionId: string, action: 'start' | 'pause' |
   }, token)
 }
 
+export async function updatePeriodOverride(sessionId: string, period: number | null, token: string) {
+  return request<{ session: SessionSummary; event_sequence?: number }>(`/api/v1/sessions/${sessionId}/period`, {
+    method: 'PUT',
+    body: JSON.stringify({ period }),
+  }, token)
+}
+
 export async function getSetup(sessionId: string, token: string) {
   return request<SetupSnapshot>(`/api/v1/setup/sessions/${sessionId}`, {}, token)
 }

@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from uuid import UUID
 
 from asyncpg import Pool
@@ -6,22 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_pool
 from ..dependencies import get_auth_context, require_roles, require_session
+from ..game_clock import current_period as live_period, effective_elapsed_ms
 from ..game_config import normalize_config, rules_for
+from ..ownership import close_active_ownership, settle_ownership
 from ..schemas import ChallengeRequest, ChallengeResultRequest, MarketFailureRecordRequest, MarketMasterTransactionRequest, MarketOwnershipUpdateRequest, TransactionRequest
 from ..security import AuthContext
 
 router = APIRouter(prefix="/api/v1", tags=["game-actions"])
-
-
-def _effective_elapsed_ms(row: object) -> int:
-    started_at = row["started_at"]
-    if started_at is None:
-        return 0
-    end_at = row["paused_at"] or datetime.now(timezone.utc)
-    pause_ms = int(row["accumulated_pause_ms"] or 0)
-    return max(0, int((end_at - started_at).total_seconds() * 1000) - pause_ms)
-
-
 def _guard(payload: TransactionRequest | MarketMasterTransactionRequest | ChallengeRequest, rules: dict[str, object] | None = None) -> None:
     rules = rules or {}
     needs_money = bool(rules.get("guard_money_pouch", True))
@@ -41,11 +31,27 @@ async def market_board(
 ) -> dict[str, object]:
     require_session(context, session_id)
     session = await pool.fetchrow(
-        "SELECT current_period, status, config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1",
+        "SELECT id, current_period, manual_period_override, status, config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1",
         session_id,
     )
     if session is None:
         raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
+    # Income is visible as it is earned, rather than appearing only when a
+    # market changes hands or the game ends. The row lock makes concurrent
+    # screen refreshes settle each completed minute exactly once.
+    if session["status"] == "running":
+        async with pool.acquire() as connection:
+            async with connection.transaction():
+                locked_session = await connection.fetchrow(
+                    "SELECT id, current_period, manual_period_override, status, config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1 FOR UPDATE",
+                    session_id,
+                )
+                if locked_session is not None and locked_session["status"] == "running":
+                    await settle_ownership(connection, locked_session)
+                if locked_session is not None:
+                    session = locked_session
+    rules = rules_for(session["config"])
+    period = live_period(session, rules)
     markets = await pool.fetch(
         """
         SELECT m.id, m.code, m.name, mo.team_id AS owner_team_id,
@@ -67,7 +73,7 @@ async def market_board(
         ORDER BY m.code, r.resource_type
         """,
         session_id,
-        session["current_period"],
+        period,
         context.role,
         context.market_id,
     )
@@ -91,17 +97,22 @@ async def market_board(
         """,
         session_id,
     ) if context.role == "market_master" else []
+    team_profile = await pool.fetchrow(
+        "SELECT id, number, name FROM teams WHERE id = $1",
+        context.team_id,
+    ) if context.team_id else None
     return {
         "session": {
-            "current_period": session["current_period"],
+            "current_period": period,
             "status": session["status"],
-            "effective_elapsed_ms": _effective_elapsed_ms(session),
+            "effective_elapsed_ms": effective_elapsed_ms(session),
         },
         "markets": [dict(market) for market in markets],
         "rates": [dict(rate) for rate in rates],
         "wallet": wallet["balance"] if wallet else None,
         "inventory": [dict(item) for item in inventory],
         "teams": [dict(team) for team in teams],
+        "team": dict(team_profile) if team_profile else None,
         "config": normalize_config(session["config"]),
     }
 
@@ -118,23 +129,21 @@ async def update_market_ownership(
     async with pool.acquire() as connection:
         async with connection.transaction():
             session = await connection.fetchrow(
-                "SELECT status, config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1 FOR UPDATE",
+                "SELECT id, status, config, started_at, paused_at, accumulated_pause_ms, manual_period_override FROM game_sessions WHERE id = $1 FOR UPDATE",
                 context.session_id,
             )
             if session is None:
                 raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
+            rules = rules_for(session["config"])
+            if session["status"] != "running" or live_period(session, rules) < int(rules["challenge_start_period"]):
+                raise HTTPException(status_code=409, detail={"code": "CHALLENGE_NOT_AVAILABLE", "message": "目前尚未到達據點挑戰開放時段。"})
             if payload.team_id is not None:
                 team = await connection.fetchrow("SELECT id FROM teams WHERE id = $1 AND session_id = $2", payload.team_id, context.session_id)
                 if team is None:
                     raise HTTPException(status_code=404, detail={"code": "TEAM_NOT_FOUND", "message": "找不到這個場次的小隊。"})
-            elapsed = _effective_elapsed_ms(session)
-            await connection.execute(
-                "UPDATE market_ownership SET ended_at = NOW(), ended_elapsed_ms = $1 WHERE market_id = $2 AND ended_at IS NULL",
-                elapsed,
-                market_id,
-            )
+            elapsed = effective_elapsed_ms(session)
+            await close_active_ownership(connection, session, market_id, context.access_id)
             if payload.team_id is not None:
-                rules = rules_for(session["config"])
                 await connection.execute(
                     "INSERT INTO market_ownership (session_id, market_id, team_id, started_at, started_elapsed_ms, rate_per_minute) VALUES ($1, $2, $3, NOW(), $4, $5)",
                     context.session_id,
@@ -172,18 +181,20 @@ async def record_market_failure(
             if existing:
                 return {"id": existing["id"], "result": "failed", "replayed": True}
             session = await connection.fetchrow(
-                "SELECT config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1 FOR UPDATE",
+                "SELECT status, config, started_at, paused_at, accumulated_pause_ms, manual_period_override FROM game_sessions WHERE id = $1 FOR UPDATE",
                 context.session_id,
             )
             if session is None:
                 raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
+            rules = rules_for(session["config"])
+            if session["status"] != "running" or live_period(session, rules) < int(rules["challenge_start_period"]):
+                raise HTTPException(status_code=409, detail={"code": "CHALLENGE_NOT_AVAILABLE", "message": "目前尚未到達據點挑戰開放時段。"})
             team = await connection.fetchrow("SELECT id FROM teams WHERE id = $1 AND session_id = $2", payload.team_id, context.session_id)
             if team is None:
                 raise HTTPException(status_code=404, detail={"code": "TEAM_NOT_FOUND", "message": "找不到這個場次的小隊。"})
-            rules = rules_for(session["config"])
             occupied = await connection.fetchval("SELECT EXISTS (SELECT 1 FROM market_ownership WHERE market_id = $1 AND ended_at IS NULL)", market_id)
             difficulty = int(rules["challenge_occupied_difficulty"] if occupied else rules["challenge_default_difficulty"])
-            elapsed = _effective_elapsed_ms(session)
+            elapsed = effective_elapsed_ms(session)
             challenge_id = await connection.fetchval(
                 """
                 INSERT INTO market_challenges (session_id, market_id, team_id, difficulty_level, result, note, cooldown_until_effective_ms, idempotency_key, created_by, judged_by, judged_at)
@@ -245,19 +256,36 @@ async def create_transaction(
                 return {"id": existing["id"], "replayed": True, "amount": existing["total_amount"], "quantity": existing["quantity"], "direction": existing["direction"], "resource_type": existing["resource_type"]}
 
             session = await connection.fetchrow(
-                "SELECT status, current_period, config FROM game_sessions WHERE id = $1 FOR UPDATE", context.session_id
+                "SELECT status, config, started_at, paused_at, accumulated_pause_ms, manual_period_override FROM game_sessions WHERE id = $1 FOR UPDATE", context.session_id
             )
             if session is None:
                 raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到遊戲場次。"})
             rules = rules_for(session["config"])
             _guard(payload, rules)
+            period = live_period(session, rules)
             if session["status"] != "running":
                 raise HTTPException(status_code=409, detail={"code": "SESSION_NOT_RUNNING", "message": "目前不在可交易的遊戲時段。"})
-            if not 1 <= session["current_period"] <= int(rules["period_count"]):
+            if period == 0:
                 raise HTTPException(status_code=409, detail={"code": "PERIOD_NOT_AVAILABLE", "message": "目前時段不在場次設定的有效範圍內。"})
             product_keys = {product["key"] for product in normalize_config(session["config"])["products"]}
             if payload.resource_type not in product_keys:
                 raise HTTPException(status_code=422, detail={"code": "PRODUCT_NOT_CONFIGURED", "message": "這個商品識別碼不在目前場次設定中。"})
+            bulk_effect_id = await connection.fetchval(
+                """
+                SELECT e.id
+                FROM black_market_effects e
+                JOIN black_market_cards c ON c.id = e.card_id
+                WHERE e.session_id = $1 AND e.team_id = $2
+                  AND e.status = 'applied' AND c.effect_type = 'next_trade_quantity_five'
+                ORDER BY e.applied_at ASC
+                LIMIT 1
+                """,
+                context.session_id,
+                payload.team_id,
+            )
+            maximum_quantity = 5 if bulk_effect_id else int(rules["trade_quantity"])
+            if not 1 <= payload.quantity <= maximum_quantity:
+                raise HTTPException(status_code=422, detail={"code": "TRADE_QUANTITY_FIXED", "message": f"這次互動最多只能交易 {maximum_quantity} 個相同原料。"})
             team = await connection.fetchrow(
                 "SELECT id FROM teams WHERE id = $1 AND session_id = $2", payload.team_id, context.session_id
             )
@@ -271,13 +299,15 @@ async def create_transaction(
             rate = await connection.fetchrow(
                 "SELECT buy_price, sell_price FROM market_rates WHERE market_id = $1 AND period = $2 AND resource_type = $3",
                 market_id,
-                session["current_period"],
+                period,
                 payload.resource_type,
             )
             if rate is None:
                 raise HTTPException(status_code=409, detail={"code": "RATE_UNAVAILABLE", "message": "這個時段沒有可用行情。"})
             if payload.direction == "buy" and rate["buy_price"] == 0:
                 raise HTTPException(status_code=409, detail={"code": "RATE_BUY_DISABLED", "message": "這個商品目前未開放購買。"})
+            if payload.direction == "sell" and rate["sell_price"] == 0:
+                raise HTTPException(status_code=409, detail={"code": "RATE_SELL_DISABLED", "message": "這個商品目前未開放出售。"})
             unit_price = rate["buy_price"] if payload.direction == "buy" else rate["sell_price"]
             quantity = payload.quantity
             total_amount = unit_price * quantity
@@ -332,6 +362,11 @@ async def create_transaction(
                 transaction_id,
                 context.access_id,
             )
+            if bulk_effect_id:
+                await connection.execute(
+                    "UPDATE black_market_effects SET status = 'voided' WHERE id = $1",
+                    bulk_effect_id,
+                )
     return {"id": transaction_id, "direction": payload.direction, "resource_type": payload.resource_type, "quantity": quantity, "amount": total_amount, "replayed": False}
 
 
@@ -352,15 +387,16 @@ async def create_challenge(
         )
         if existing:
             return {"id": existing["id"], "replayed": True}
-        session = await connection.fetchrow("SELECT status, current_period, config FROM game_sessions WHERE id = $1", context.session_id)
+        session = await connection.fetchrow("SELECT status, config, started_at, paused_at, accumulated_pause_ms, manual_period_override FROM game_sessions WHERE id = $1", context.session_id)
         if session is None:
             raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到遊戲場次。"})
         rules = rules_for(session["config"])
         _guard(payload, rules)
-        if session["status"] != "running" or session["current_period"] < int(rules["challenge_start_period"]):
-            raise HTTPException(status_code=409, detail={"code": "CHALLENGE_NOT_AVAILABLE", "message": "目前尚未到達據點挑戰開放時段。"})
-        if session["current_period"] > int(rules["period_count"]):
+        period = live_period(session, rules)
+        if period == 0:
             raise HTTPException(status_code=409, detail={"code": "PERIOD_NOT_AVAILABLE", "message": "目前時段不在場次設定的有效範圍內。"})
+        if session["status"] != "running" or period < int(rules["challenge_start_period"]):
+            raise HTTPException(status_code=409, detail={"code": "CHALLENGE_NOT_AVAILABLE", "message": "目前尚未到達據點挑戰開放時段。"})
         is_occupied = await connection.fetchval(
             "SELECT EXISTS (SELECT 1 FROM market_ownership WHERE market_id = $1 AND ended_at IS NULL)", market_id
         )
@@ -446,17 +482,17 @@ async def apply_challenge_ownership(
                 raise HTTPException(status_code=409, detail={"code": "CHALLENGE_NOT_SUCCESS", "message": "只有判定成功的挑戰才能套用佔領。"})
             if challenge["ownership_applied_at"] is not None:
                 raise HTTPException(status_code=409, detail={"code": "OWNERSHIP_ALREADY_APPLIED", "message": "這筆挑戰已套用佔領狀態。"})
-            elapsed = await connection.fetchval(
-                "SELECT CASE WHEN started_at IS NULL THEN 0 ELSE GREATEST(0, EXTRACT(EPOCH FROM ((CASE WHEN paused_at IS NULL THEN NOW() ELSE paused_at END) - started_at)) * 1000 - accumulated_pause_ms) END FROM game_sessions WHERE id = $1",
+            session = await connection.fetchrow(
+                "SELECT id, status, config, started_at, paused_at, accumulated_pause_ms, manual_period_override FROM game_sessions WHERE id = $1 FOR UPDATE",
                 context.session_id,
             )
-            session_config = await connection.fetchval("SELECT config FROM game_sessions WHERE id = $1", context.session_id)
-            rules = rules_for(session_config)
-            await connection.execute(
-                "UPDATE market_ownership SET ended_at = NOW(), ended_elapsed_ms = $1 WHERE market_id = $2 AND ended_at IS NULL",
-                elapsed,
-                challenge["market_id"],
-            )
+            if session is None:
+                raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到遊戲場次。"})
+            elapsed = effective_elapsed_ms(session)
+            rules = rules_for(session["config"])
+            if session["status"] != "running" or live_period(session, rules) < int(rules["challenge_start_period"]):
+                raise HTTPException(status_code=409, detail={"code": "CHALLENGE_NOT_AVAILABLE", "message": "目前尚未到達據點挑戰開放時段。"})
+            await close_active_ownership(connection, session, challenge["market_id"], context.access_id)
             await connection.execute(
                 "INSERT INTO market_ownership (session_id, market_id, team_id, started_at, started_elapsed_ms, rate_per_minute) VALUES ($1, $2, $3, NOW(), $4, $5)",
                 context.session_id,

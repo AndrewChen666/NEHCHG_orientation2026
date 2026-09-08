@@ -1,0 +1,373 @@
+- generic [active] [ref=e1]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - link "回到活米村首頁" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]:
+          - strong [ref=e10]: 活米村
+          - text: 現場控制台
+      - navigation "工作板導覽" [ref=e15]:
+        - link "總覽" [ref=e16] [cursor=pointer]:
+          - /url: /admin
+        - link "活動流程" [ref=e17] [cursor=pointer]:
+          - /url: /admin/activity
+        - link "開局準備" [ref=e18] [cursor=pointer]:
+          - /url: /admin/setup
+        - link "市場與行情" [ref=e19] [cursor=pointer]:
+          - /url: /admin/markets
+        - link "隊伍資料" [ref=e20] [cursor=pointer]:
+          - /url: /admin/teams
+        - link "地圖與佔領" [ref=e21] [cursor=pointer]:
+          - /url: /admin/map
+      - generic [ref=e22]:
+        - generic "遊戲狀態" [ref=e23]:
+          - generic [ref=e30]:
+            - generic [ref=e31]: 第 3 時段
+            - strong [ref=e32]: 22:11
+        - button "離開" [ref=e40] [cursor=pointer]
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - heading "總召工作台" [level=1] [ref=e46]
+          - paragraph [ref=e47]: 先處理需要決定的事，再查看全場狀態。所有資料會即時同步。
+        - generic [ref=e48]:
+          - button "重新讀取" [ref=e49] [cursor=pointer]
+          - link "開局準備" [ref=e52] [cursor=pointer]:
+            - /url: /admin/setup
+      - region "現場狀態" [ref=e55]:
+        - generic [ref=e56]:
+          - text: 目前時段
+          - generic [ref=e57]:
+            - strong [ref=e58]: 第 3 段
+            - emphasis [ref=e59]: 進行中
+          - generic [ref=e61]: 手動固定中・累積 21:00
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - term [ref=e64]: 場上總金幣
+            - definition [ref=e65]: "289"
+            - generic [ref=e66]: 開局共 180 枚
+          - generic [ref=e67]:
+            - term [ref=e68]: 已佔領據點
+            - definition [ref=e69]: 2 / 8
+            - generic [ref=e70]: 6 個市場仍開放
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - generic [ref=e73]: 時段安全閥
+            - strong [ref=e74]: 手動鎖定中
+          - paragraph [ref=e75]: 全場目前固定在第 3 段；累積時間仍會保留。
+          - generic [ref=e482]: 已固定為第 3 段；需要時可按「恢復自動換段」。
+      - region [ref=e76]:
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - heading "遊戲時鐘與時段控制" [level=2] [ref=e79]
+            - paragraph [ref=e80]: 暫停會凍結全場規則與收入；恢復後會沿用原本累積時間。手動時段只覆蓋顯示與規則判定，不會重設計時。
+          - generic [ref=e81]: 人工覆寫
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - button "暫停全場" [ref=e84] [cursor=pointer]
+            - button "結束並結算" [ref=e87] [cursor=pointer]
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - generic [ref=e90]: 指定目前時段
+              - generic [ref=e91]: 先選擇，再按套用，避免誤觸。
+            - radiogroup "指定遊戲時段" [ref=e92]:
+              - radio "第 1 段" [ref=e93] [cursor=pointer]
+              - radio "第 2 段" [ref=e94] [cursor=pointer]
+              - radio "第 3 段" [checked] [ref=e95] [cursor=pointer]
+              - radio "第 4 段" [ref=e96] [cursor=pointer]
+            - generic [ref=e97]:
+              - button "切換為第 3 段" [disabled] [ref=e481]
+              - button "恢復自動換段" [ref=e99] [cursor=pointer]
+      - generic [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - heading "隊伍金幣排行" [level=2] [ref=e104]
+              - paragraph [ref=e105]: 依目前金錢袋排序
+            - link "查看隊伍資產 →" [ref=e106] [cursor=pointer]:
+              - /url: /admin/teams
+          - table [ref=e108]:
+            - rowgroup [ref=e109]:
+              - row [ref=e110]:
+                - columnheader "隊伍" [ref=e111]
+                - columnheader "金幣" [ref=e112]
+                - columnheader "資產趨勢" [ref=e113]
+                - columnheader "狀態" [ref=e114]
+            - rowgroup [ref=e115]:
+              - row [ref=e421]:
+                - cell "隊伍 7 第 7 隊 持有 1 個據點" [ref=e422]:
+                  - text: 隊伍
+                  - generic [ref=e118]:
+                    - generic [ref=e119]: "7"
+                    - generic [ref=e120]:
+                      - strong [ref=e121]: 第 7 隊
+                      - generic [ref=e122]: 持有 1 個據點
+                - cell "金幣 33" [ref=e423]
+                - cell [ref=e424]
+                - cell "狀態 領先中" [ref=e425]:
+                  - text: 狀態
+                  - generic [ref=e128]: 領先中
+              - row [ref=e426]:
+                - cell "隊伍 1 第 1 隊 即時錢包餘額" [ref=e427]:
+                  - text: 隊伍
+                  - generic [ref=e131]:
+                    - generic [ref=e132]: "1"
+                    - generic [ref=e133]:
+                      - strong [ref=e134]: 第 1 隊
+                      - generic [ref=e135]: 即時錢包餘額
+                - cell "金幣 32" [ref=e428]
+                - cell [ref=e429]
+                - cell "狀態 進行中" [ref=e430]:
+                  - text: 狀態
+                  - generic [ref=e141]: 進行中
+              - row [ref=e431]:
+                - cell "隊伍 11 第 11 隊 即時錢包餘額" [ref=e432]:
+                  - text: 隊伍
+                  - generic [ref=e144]:
+                    - generic [ref=e145]: "11"
+                    - generic [ref=e146]:
+                      - strong [ref=e147]: 第 11 隊
+                      - generic [ref=e148]: 即時錢包餘額
+                - cell "金幣 29" [ref=e433]
+                - cell [ref=e434]
+                - cell "狀態 進行中" [ref=e435]:
+                  - text: 狀態
+                  - generic [ref=e154]: 進行中
+              - row [ref=e436]:
+                - cell "隊伍 3 第 3 隊 持有 1 個據點" [ref=e437]:
+                  - text: 隊伍
+                  - generic [ref=e157]:
+                    - generic [ref=e158]: "3"
+                    - generic [ref=e159]:
+                      - strong [ref=e160]: 第 3 隊
+                      - generic [ref=e161]: 持有 1 個據點
+                - cell "金幣 28" [ref=e438]
+                - cell [ref=e439]
+                - cell "狀態 持有據點" [ref=e440]:
+                  - text: 狀態
+                  - generic [ref=e167]: 持有據點
+              - row [ref=e441]:
+                - cell "隊伍 8 第 8 隊 即時錢包餘額" [ref=e442]:
+                  - text: 隊伍
+                  - generic [ref=e170]:
+                    - generic [ref=e171]: "8"
+                    - generic [ref=e172]:
+                      - strong [ref=e173]: 第 8 隊
+                      - generic [ref=e174]: 即時錢包餘額
+                - cell "金幣 26" [ref=e443]
+                - cell [ref=e444]
+                - cell "狀態 進行中" [ref=e445]:
+                  - text: 狀態
+                  - generic [ref=e180]: 進行中
+              - row [ref=e446]:
+                - cell "隊伍 5 第 5 隊 即時錢包餘額" [ref=e447]:
+                  - text: 隊伍
+                  - generic [ref=e183]:
+                    - generic [ref=e184]: "5"
+                    - generic [ref=e185]:
+                      - strong [ref=e186]: 第 5 隊
+                      - generic [ref=e187]: 即時錢包餘額
+                - cell "金幣 24" [ref=e448]
+                - cell [ref=e449]
+                - cell "狀態 進行中" [ref=e450]:
+                  - text: 狀態
+                  - generic [ref=e193]: 進行中
+              - row [ref=e451]:
+                - cell "隊伍 9 第 9 隊 即時錢包餘額" [ref=e452]:
+                  - text: 隊伍
+                  - generic [ref=e196]:
+                    - generic [ref=e197]: "9"
+                    - generic [ref=e198]:
+                      - strong [ref=e199]: 第 9 隊
+                      - generic [ref=e200]: 即時錢包餘額
+                - cell "金幣 22" [ref=e453]
+                - cell [ref=e454]
+                - cell "狀態 進行中" [ref=e455]:
+                  - text: 狀態
+                  - generic [ref=e206]: 進行中
+              - row [ref=e456]:
+                - cell "隊伍 2 第 2 隊 即時錢包餘額" [ref=e457]:
+                  - text: 隊伍
+                  - generic [ref=e209]:
+                    - generic [ref=e210]: "2"
+                    - generic [ref=e211]:
+                      - strong [ref=e212]: 第 2 隊
+                      - generic [ref=e213]: 即時錢包餘額
+                - cell "金幣 21" [ref=e458]
+                - cell [ref=e459]
+                - cell "狀態 進行中" [ref=e460]:
+                  - text: 狀態
+                  - generic [ref=e219]: 進行中
+              - row [ref=e461]:
+                - cell "隊伍 10 第 10 隊 即時錢包餘額" [ref=e462]:
+                  - text: 隊伍
+                  - generic [ref=e222]:
+                    - generic [ref=e223]: "10"
+                    - generic [ref=e224]:
+                      - strong [ref=e225]: 第 10 隊
+                      - generic [ref=e226]: 即時錢包餘額
+                - cell "金幣 20" [ref=e463]
+                - cell [ref=e464]
+                - cell "狀態 進行中" [ref=e465]:
+                  - text: 狀態
+                  - generic [ref=e232]: 進行中
+              - row [ref=e466]:
+                - cell "隊伍 4 第 4 隊 即時錢包餘額" [ref=e467]:
+                  - text: 隊伍
+                  - generic [ref=e235]:
+                    - generic [ref=e236]: "4"
+                    - generic [ref=e237]:
+                      - strong [ref=e238]: 第 4 隊
+                      - generic [ref=e239]: 即時錢包餘額
+                - cell "金幣 19" [ref=e468]
+                - cell [ref=e469]
+                - cell "狀態 進行中" [ref=e470]:
+                  - text: 狀態
+                  - generic [ref=e245]: 進行中
+              - row [ref=e471]:
+                - cell "隊伍 12 第 12 隊 即時錢包餘額" [ref=e472]:
+                  - text: 隊伍
+                  - generic [ref=e248]:
+                    - generic [ref=e249]: "12"
+                    - generic [ref=e250]:
+                      - strong [ref=e251]: 第 12 隊
+                      - generic [ref=e252]: 即時錢包餘額
+                - cell "金幣 18" [ref=e473]
+                - cell [ref=e474]
+                - cell "狀態 進行中" [ref=e475]:
+                  - text: 狀態
+                  - generic [ref=e258]: 進行中
+              - row [ref=e476]:
+                - cell "隊伍 6 第 6 隊 即時錢包餘額" [ref=e477]:
+                  - text: 隊伍
+                  - generic [ref=e261]:
+                    - generic [ref=e262]: "6"
+                    - generic [ref=e263]:
+                      - strong [ref=e264]: 第 6 隊
+                      - generic [ref=e265]: 即時錢包餘額
+                - cell "金幣 17" [ref=e478]
+                - cell [ref=e479]
+                - cell "狀態 進行中" [ref=e480]:
+                  - text: 狀態
+                  - generic [ref=e271]: 進行中
+        - generic [ref=e272]:
+          - generic [ref=e273]:
+            - generic [ref=e274]:
+              - heading "剛發生的事件" [level=2] [ref=e275]
+              - paragraph [ref=e276]: 所有操作都會留下紀錄
+            - generic [ref=e277]: 即時同步
+          - generic [ref=e278]:
+            - generic [ref=e483]:
+              - generic [ref=e487]:
+                - strong [ref=e488]: 時段固定在第 3 段
+                - generic [ref=e489]: 總召可在安全閥中恢復自動換段。
+              - generic [ref=e490]: 目前
+            - generic [ref=e287]:
+              - generic [ref=e291]:
+                - strong [ref=e292]: 2 個市場已有隊伍佔領
+                - generic [ref=e293]: 收入會按完整分鐘入帳；結束時依規則處理剩餘秒數。
+              - generic [ref=e294]: 即時
+            - generic [ref=e295]:
+              - generic [ref=e299]:
+                - strong [ref=e300]: 全場狀態已同步
+                - generic [ref=e301]: 伺服器事件序號 0。
+              - generic [ref=e302]: 剛剛
+      - generic [ref=e303]:
+        - generic [ref=e304]:
+          - generic [ref=e305]:
+            - generic [ref=e306]:
+              - heading "市場佔領" [level=2] [ref=e307]
+              - paragraph [ref=e308]: 據點挑戰已開放
+            - link "查看地圖 →" [ref=e309] [cursor=pointer]:
+              - /url: /admin/map
+          - generic [ref=e310]:
+            - generic [ref=e311]:
+              - generic [ref=e312]:
+                - generic [ref=e313]: A
+                - generic [ref=e314]:
+                  - strong [ref=e315]: A 市場
+                  - generic [ref=e316]: 第 7 隊・第 7 隊
+              - generic [ref=e317]: 已佔領
+            - generic [ref=e318]:
+              - generic [ref=e319]:
+                - generic [ref=e320]: B
+                - generic [ref=e321]:
+                  - strong [ref=e322]: B 市場
+                  - generic [ref=e323]: 第 3 隊・第 3 隊
+              - generic [ref=e324]: 已佔領
+            - generic [ref=e325]:
+              - generic [ref=e326]:
+                - generic [ref=e327]: C
+                - generic [ref=e328]:
+                  - strong [ref=e329]: C 市場
+                  - generic [ref=e330]: 開放中
+              - generic [ref=e331]: 待佔領
+            - generic [ref=e332]:
+              - generic [ref=e333]:
+                - generic [ref=e334]: D
+                - generic [ref=e335]:
+                  - strong [ref=e336]: D 市場
+                  - generic [ref=e337]: 開放中
+              - generic [ref=e338]: 待佔領
+            - generic [ref=e339]:
+              - generic [ref=e340]:
+                - generic [ref=e341]: E
+                - generic [ref=e342]:
+                  - strong [ref=e343]: E 市場
+                  - generic [ref=e344]: 開放中
+              - generic [ref=e345]: 待佔領
+            - generic [ref=e346]:
+              - generic [ref=e347]:
+                - generic [ref=e348]: F
+                - generic [ref=e349]:
+                  - strong [ref=e350]: F 市場
+                  - generic [ref=e351]: 開放中
+              - generic [ref=e352]: 待佔領
+            - generic [ref=e353]:
+              - generic [ref=e354]:
+                - generic [ref=e355]: G
+                - generic [ref=e356]:
+                  - strong [ref=e357]: G 市場
+                  - generic [ref=e358]: 開放中
+              - generic [ref=e359]: 待佔領
+            - generic [ref=e360]:
+              - generic [ref=e361]:
+                - generic [ref=e362]: H
+                - generic [ref=e363]:
+                  - strong [ref=e364]: H 市場
+                  - generic [ref=e365]: 開放中
+              - generic [ref=e366]: 待佔領
+        - generic [ref=e367]:
+          - generic [ref=e368]:
+            - generic [ref=e369]:
+              - heading "角色分工" [level=2] [ref=e370]
+              - paragraph [ref=e371]: 總召掌握流程；現場判定留在角色工作台。
+            - generic [ref=e372]: 權限分離
+          - generic [ref=e376]:
+            - strong [ref=e377]: 隱藏魔王事件
+            - generic [ref=e378]: 題庫、現場挑戰、成功發獎與失敗紀錄都由魔王工作台完成。
+        - generic [ref=e379]:
+          - generic [ref=e381]:
+            - heading "常用設定" [level=2] [ref=e382]
+            - paragraph [ref=e383]: 不必在全局頁面尋找功能。
+          - generic [ref=e384]:
+            - link "活動流程 查看固定 60 分鐘規則" [ref=e385] [cursor=pointer]:
+              - /url: /admin/activity
+              - generic [ref=e388]:
+                - strong [ref=e389]: 活動流程
+                - generic [ref=e390]: 查看固定 60 分鐘規則
+            - link "開局準備 隊名、地圖與固定規則" [ref=e393] [cursor=pointer]:
+              - /url: /admin/setup
+              - generic [ref=e396]:
+                - strong [ref=e397]: 開局準備
+                - generic [ref=e398]: 隊名、地圖與固定規則
+            - link "查看行情 依時段查看固定市場價格" [ref=e401] [cursor=pointer]:
+              - /url: /admin/markets
+              - generic [ref=e404]:
+                - strong [ref=e405]: 查看行情
+                - generic [ref=e406]: 依時段查看固定市場價格
+  - generic [ref=e409]:
+    - generic "Toggle devtools panel" [ref=e410] [cursor=pointer]
+    - generic "Toggle Component Inspector":
+      - img:
+        - generic [ref=e418] [cursor=pointer]

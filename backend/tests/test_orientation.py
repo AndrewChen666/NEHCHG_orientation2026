@@ -10,6 +10,9 @@ from fastapi import HTTPException
 from app.activity import effective_elapsed_ms, stage_is_current
 from app.config import Settings
 from app.dependencies import get_auth_context
+from app.game_clock import current_period as game_current_period, period_for_elapsed
+from app.game_config import DEFAULT_RULES
+from app.ownership import _earned_minutes
 from app.routers.auth import _verify_google_credential
 from app.schemas import GoogleLoginRequest
 from app.routers.orientation import RoleAssignmentInput, ScoreEventRequest, StageBatchRequest
@@ -43,6 +46,31 @@ class ActivityRulesTest(TestCase):
         current = {"id": uuid4()}
         self.assertTrue(stage_is_current(current, current))
         self.assertFalse(stage_is_current({"id": uuid4()}, current))
+
+
+class VillageClockRulesTest(TestCase):
+    def test_every_fifteen_minutes_moves_to_the_next_period(self):
+        self.assertEqual(period_for_elapsed(0, DEFAULT_RULES), 1)
+        self.assertEqual(period_for_elapsed(15 * 60_000, DEFAULT_RULES), 2)
+        self.assertEqual(period_for_elapsed(45 * 60_000, DEFAULT_RULES), 4)
+        self.assertEqual(period_for_elapsed(60 * 60_000, DEFAULT_RULES), 0)
+
+    def test_manual_period_takes_priority_over_automatic_clock(self):
+        started = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        row = {
+            "started_at": started,
+            "paused_at": started + timedelta(minutes=31),
+            "accumulated_pause_ms": 0,
+            "manual_period_override": 1,
+        }
+        self.assertEqual(game_current_period(row, DEFAULT_RULES), 1)
+        row["manual_period_override"] = None
+        self.assertEqual(game_current_period(row, DEFAULT_RULES), 3)
+
+    def test_ownership_rounds_only_the_final_partial_minute(self):
+        self.assertEqual(_earned_minutes(0, 89_000, final=False), 1)
+        self.assertEqual(_earned_minutes(0, 89_000, final=True), 1)
+        self.assertEqual(_earned_minutes(0, 90_000, final=True), 2)
 
 
 class GoogleIdentityTest(TestCase):

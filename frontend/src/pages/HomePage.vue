@@ -22,7 +22,6 @@
 
     <div id="main-content">
       <section id="home" class="home-hero" aria-labelledby="hero-title">
-        <div class="home-hero__stars" aria-hidden="true"></div>
         <div class="home-hero__copy">
           <span class="home-kicker">LUMOS · NEHCHG MSTC</span>
           <h1 id="hero-title"><span>「實」「沂」<br class="home-hero__mobile-break" />之「嶺」</span><em>一起放肆<br class="home-hero__mobile-break" />｜《Lumos》</em></h1>
@@ -35,10 +34,7 @@
 
         <div class="home-hero__visual" role="img" aria-label="Lumos 活動主視覺">
           <img class="home-hero__image" src="/orientation-hero.jpg" alt="" />
-          <div class="home-hero__seal" aria-hidden="true"><img class="home-hero__seal-icon" src="/icon.png" alt="" /><small>2026</small></div>
         </div>
-
-        <div class="home-hero__meta"><span>12</span><small>SEP<br />2026</small><b>LUMOS<br />EVENT</b></div>
       </section>
 
       <section id="events" class="home-section home-section--events" aria-labelledby="events-title">
@@ -64,7 +60,7 @@
       </section>
 
       <section id="houses" class="home-section home-section--houses" aria-labelledby="houses-title">
-        <div class="home-section__heading"><div><span class="home-kicker">CHOOSE YOUR CONSTELLATION</span><h2 id="houses-title">四大學院</h2></div><p>每座學院都會分為三支小隊</p></div>
+        <div class="home-section__heading"><div><span class="home-kicker">活動編組</span><h2 id="houses-title">四大學院</h2></div><p>每座學院都會分為三支小隊</p></div>
         <div class="house-grid" :aria-busy="housesLoading">
           <article v-for="house in houses" :key="house.number" class="house-plaque" :class="`house-plaque--${house.tone}`">
             <span class="house-plaque__symbol" aria-hidden="true">{{ house.icon }}</span><span class="house-plaque__name">{{ house.name }}</span><strong>{{ house.english_name }}</strong><p>{{ house.description }}</p>
@@ -474,4 +470,52 @@ async function loadPublicHome() {
   .home-hero__stars, .home-hero__stars::before, .home-hero__stars::after, .home-hero__image, .home-hero__seal { animation: none; }
   .home-section { opacity: 1; transform: none; }
 }
+
+/* Public page: a clear event brief that belongs to the same product family. */
+.home-page { --home-bg: var(--color-bg); --home-ink: var(--color-ink); --home-muted: var(--color-muted); --home-accent: var(--color-primary); --home-line: var(--color-border); --home-line-strong: var(--color-border-strong); color: var(--home-ink); background: var(--home-bg); }
+.home-header { position: sticky; min-height: 70px; padding: 10px clamp(20px, 5vw, 76px); background: var(--color-surface); border-bottom-color: var(--color-border); box-shadow: 0 1px 0 oklch(0.22 0.03 245 / .03); }
+.home-brand { color: var(--color-primary); }
+.home-brand__crest { filter: none; }
+.home-brand__copy strong { font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif; font-weight: 850; letter-spacing: .04em; }
+.home-nav a, .home-header__login { color: var(--color-muted); }
+.home-nav a:hover, .home-nav a:focus-visible, .home-header__login:hover { color: var(--color-primary); }
+.home-header__login { color: var(--color-primary-strong); border-color: var(--color-border-strong); border-radius: 5px; }
+.home-hero { min-height: 520px; padding: 78px clamp(24px, 9vw, 140px); background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.home-hero::after, .home-hero__stars, .home-hero__meta, .home-hero__seal { display: none; }
+.home-hero__copy { max-width: 520px; padding-bottom: 0; }
+.home-kicker { color: var(--color-primary); font-size: 11px; font-weight: 800; letter-spacing: .06em; }
+.home-hero h1 { color: var(--color-ink); font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif; font-weight: 850; line-height: 1.15; letter-spacing: -.03em; text-shadow: none; }
+.home-hero h1 em { color: var(--color-primary); }
+.home-hero__intro { color: var(--color-muted); line-height: 1.6; }
+.brass-button { gap: 12px; color: white; background: var(--color-primary); border-color: var(--color-primary); border-radius: 5px; font-family: inherit; font-size: 14px; font-weight: 800; }
+.brass-button::before { display: none; }
+.brass-button:hover { color: white; background: var(--color-primary-strong); transform: none; }
+.quiet-link { color: var(--color-primary-strong); font-weight: 800; }
+.quiet-link span { color: inherit; }
+.home-hero__visual { min-height: 360px; margin: 0; border-radius: var(--radius-md); }
+.home-hero__visual::after { background: linear-gradient(90deg, oklch(.22 .03 245 / .14), transparent 62%); }
+.home-hero__image { inset: 0; width: 100%; height: 100%; mix-blend-mode: normal; opacity: 1; filter: saturate(.88) contrast(1.02); animation: none; }
+.home-section { padding-block: 72px; }
+.home-section h2, .home-section__heading h2 { color: var(--color-ink); font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif; font-size: clamp(28px, 3vw, 40px); font-weight: 850; }
+.home-section__heading > p, .home-section__count, .schedule-table td p, .home-footer { color: var(--color-muted); }
+.home-section__rule, .schedule-table-wrap { border-color: var(--color-border); background: var(--color-surface); }
+.schedule-table th { color: var(--color-muted); border-bottom-color: var(--color-border); font-weight: 800; letter-spacing: .06em; }
+.schedule-table td { border-bottom-color: var(--color-border-subtle); }
+.schedule-table tbody tr:hover { background: var(--color-surface-quiet); }
+.schedule-table td:first-child time { color: var(--color-primary); font-family: inherit; font-size: 20px; font-weight: 800; }
+.schedule-table td strong { color: var(--color-ink); font-family: inherit; font-size: 18px; font-weight: 800; }
+.house-grid { gap: 12px; }
+.house-plaque { min-height: 220px; color: var(--color-muted); background: var(--color-surface); border-color: var(--color-border); border-radius: var(--radius-md); }
+.house-plaque:hover { background: var(--color-surface-quiet); border-color: var(--house-color); transform: none; }
+.house-plaque__symbol { width: 60px; height: 60px; margin-bottom: 16px; border-radius: 50%; clip-path: none; }
+.house-plaque__name { color: var(--color-ink); font-family: inherit; font-size: 18px; font-weight: 850; }
+.house-plaque strong { font-family: inherit; font-weight: 800; letter-spacing: .08em; }
+.home-footer { border-top: 1px solid var(--color-border); }
+.home-footer__brand, .home-footer__top { color: var(--color-primary); font-family: inherit; font-weight: 800; }
+.home-footer__top:hover { color: var(--color-primary-strong); }
+.home-section { opacity: 1; transform: none; transition: none; }
+@media (max-width: 1024px) { .home-header { background: var(--color-surface); } .home-nav { background: var(--color-surface); border-bottom-color: var(--color-border); } .home-menu-toggle { color: var(--color-primary); border-color: var(--color-border-strong); } .home-hero { padding-top: 44px; } .home-hero__visual::after { background: linear-gradient(180deg, transparent, oklch(1 0 0 / .12)); } }
+@media (max-width: 680px) { .home-header { min-height: 64px; background: var(--color-surface); } .home-nav { background: var(--color-surface); } .home-hero { display: flex; min-height: auto; flex-direction: column; padding: 34px 20px 0; } .home-hero__copy { padding: 0; } .home-hero__visual { order: 2; width: calc(100% + 40px); height: 280px; min-height: 280px; margin: 28px -20px 0; border-radius: 0; } .home-section { width: min(100% - 40px, 540px); padding-block: 52px; } }
+@media (max-width: 520px) { .home-header { background: var(--color-surface); } .home-nav { background: var(--color-surface); } .home-hero h1 { font-size: 34px; } .home-section { width: calc(100% - 32px); } .home-footer { width: calc(100% - 32px); } }
+@media (max-width: 680px) { .schedule-table tr { grid-template-columns: 106px minmax(0, 1fr); column-gap: 10px; } .schedule-table td:first-child time { font-size: 14px; } .schedule-table td strong { font-size: 15px; } }
 </style>

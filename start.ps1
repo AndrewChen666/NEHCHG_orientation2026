@@ -19,8 +19,8 @@ $BackendRoot = Join-Path $ProjectRoot 'backend'
 $FrontendRoot = Join-Path $ProjectRoot 'frontend'
 $BackendVenv = Join-Path $BackendRoot '.venv'
 $BackendPython = Join-Path $BackendVenv 'Scripts\python.exe'
-$BackendEnv = Join-Path $BackendRoot '.env'
-$FrontendEnv = Join-Path $FrontendRoot '.env'
+$ProjectEnv = Join-Path $ProjectRoot '.env'
+$ProjectEnvExample = Join-Path $ProjectRoot '.env.example'
 
 function Write-Info {
     param([string]$Message)
@@ -176,11 +176,11 @@ function ConvertTo-PowerShellLiteral {
 }
 
 function Get-DatabaseMode {
-    if (-not (Test-Path -LiteralPath $BackendEnv)) {
+    if (-not (Test-Path -LiteralPath $ProjectEnv)) {
         return 'disabled'
     }
 
-    $databaseLine = Get-Content -LiteralPath $BackendEnv -ErrorAction Stop | Where-Object { $_ -match '^\s*DATABASE_URL\s*=' } | Select-Object -First 1
+    $databaseLine = Get-Content -LiteralPath $ProjectEnv -ErrorAction Stop | Where-Object { $_ -match '^\s*DATABASE_URL\s*=' } | Select-Object -First 1
 
     if ($null -eq $databaseLine) {
         return 'disabled'
@@ -195,6 +195,19 @@ function Get-DatabaseMode {
         return 'placeholder'
     }
     return 'configured'
+}
+
+function Ensure-ProjectEnv {
+    if (Test-Path -LiteralPath $ProjectEnv) {
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $ProjectEnvExample)) {
+        Throw-SetupError '找不到專案根目錄的 .env.example。' @('請確認專案檔案是否完整。')
+    }
+
+    Copy-Item -LiteralPath $ProjectEnvExample -Destination $ProjectEnv
+    Write-WarningMessage '已建立根目錄 .env；請填入實際的 DATABASE_URL、SESSION_SECRET 與 Google Client ID。'
 }
 
 function Ensure-Backend {
@@ -226,10 +239,6 @@ function Ensure-Backend {
         Throw-SetupError '後端依賴尚未安裝，且目前使用了 -SkipInstall。' @('移除 -SkipInstall，讓腳本自動執行 pip install。')
     }
 
-    if (-not (Test-Path -LiteralPath $BackendEnv)) {
-        Copy-Item -LiteralPath (Join-Path $BackendRoot '.env.example') -Destination $BackendEnv
-        Write-WarningMessage '已建立 backend/.env；目前 DATABASE_URL 是範例值，後端會以無資料庫模式啟動。'
-    }
     Write-Success '後端環境準備完成。'
 }
 
@@ -259,10 +268,6 @@ function Ensure-Frontend {
         Invoke-CheckedCommand $script:NpmPath @('install') $FrontendRoot '補齊前端依賴失敗。'
     }
 
-    if (-not (Test-Path -LiteralPath $FrontendEnv)) {
-        Copy-Item -LiteralPath (Join-Path $FrontendRoot '.env.example') -Destination $FrontendEnv
-        Write-Info '已建立 frontend/.env。'
-    }
     Write-Success '前端環境準備完成。'
 }
 
@@ -320,7 +325,7 @@ try {
 catch {
     Write-Host '[ERROR] 後端啟動失敗。' -ForegroundColor Red
     Write-Host `$_.Exception.Message -ForegroundColor Red
-    Write-Host '請確認 backend/.env 的 DATABASE_URL；若只想查看介面，可暫時移除 DATABASE_URL。' -ForegroundColor Yellow
+    Write-Host '請確認根目錄 .env 的 DATABASE_URL；若只想查看介面，可暫時移除 DATABASE_URL。' -ForegroundColor Yellow
     Read-Host '按 Enter 關閉此視窗'
 }
 "@
@@ -422,6 +427,7 @@ try {
     if ($startFrontend) {
         Ensure-Frontend
     }
+    Ensure-ProjectEnv
 
     $backendReused = $false
     $frontendReused = $false
@@ -438,10 +444,10 @@ try {
         $databaseMode = Get-DatabaseMode
         $disableDatabase = $databaseMode -ne 'configured'
         if ($databaseMode -eq 'placeholder') {
-            Write-WarningMessage 'backend/.env 仍是範例 DATABASE_URL；先以無資料庫模式啟動，介面可以查看，但登入與遊戲操作不可用。'
+            Write-WarningMessage '根目錄 .env 仍是範例 DATABASE_URL；先以無資料庫模式啟動，介面可以查看，但登入與遊戲操作不可用。'
         }
         elseif ($databaseMode -eq 'disabled') {
-            Write-WarningMessage 'backend/.env 沒有有效 DATABASE_URL；先以無資料庫模式啟動。'
+            Write-WarningMessage '根目錄 .env 沒有有效 DATABASE_URL；先以無資料庫模式啟動。'
         }
         $backendProcess = Start-BackendWindow -PowerShellPath $powerShellPath -PythonPath $BackendPython -DisableDatabase $disableDatabase
     }

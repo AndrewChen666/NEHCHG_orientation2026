@@ -1,7 +1,8 @@
 import json
 import secrets
+from copy import deepcopy
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from asyncpg import Pool
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -10,21 +11,33 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ..config import Settings, get_settings
 from ..db import get_pool
 from ..dependencies import require_roles, require_session
-from ..game_config import DEFAULT_PRODUCTS, DEFAULT_RULES, DEFAULT_TEAM_PROFILES, MAP_IMAGE_MAX_LENGTH, MAP_IMAGE_PREFIXES, TEAM_COUNT, TEAM_TONES, normalize_config
+from ..game_clock import current_period as live_period
+from ..game_config import (
+    DEFAULT_BLACK_MARKET_CARDS,
+    DEFAULT_INITIAL_INVENTORY,
+    DEFAULT_PRODUCTS,
+    DEFAULT_RULES,
+    DEFAULT_TEAM_PROFILES,
+    INITIAL_MONEY,
+    MAP_IMAGE_MAX_LENGTH,
+    MAP_IMAGE_PREFIXES,
+    MARKET_CODES,
+    TEAM_COUNT,
+    TEAM_TONES,
+    default_rates,
+    normalize_config,
+)
 from ..security import AuthContext
 
 router = APIRouter(prefix="/api/v1/setup", tags=["setup"])
 
-MARKET_CODES = tuple("ABCDEFGH")
-
-
 class InventorySeed(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    dragon_egg: int = Field(default=0, ge=0)
-    time_device: int = Field(default=0, ge=0)
-    unicorn_blood: int = Field(default=0, ge=0)
-    basilisk_fang: int = Field(default=0, ge=0)
+    dragon_egg: int = Field(default=0, ge=0, le=0)
+    time_device: int = Field(default=0, ge=0, le=0)
+    unicorn_blood: int = Field(default=0, ge=0, le=0)
+    basilisk_fang: int = Field(default=0, ge=0, le=0)
 
     def as_dict(self) -> dict[str, int]:
         return self.model_dump()
@@ -36,7 +49,7 @@ class TeamSeed(BaseModel):
     icon: str = Field(default="✦", min_length=1, max_length=4)
     description: str = Field(default="", max_length=120)
     tone: str = Field(default="aurora", pattern=rf"^({'|'.join(TEAM_TONES)})$")
-    initial_money: int = Field(default=100, ge=0)
+    initial_money: int = Field(default=INITIAL_MONEY, ge=INITIAL_MONEY, le=INITIAL_MONEY)
     initial_inventory: InventorySeed = Field(default_factory=InventorySeed)
 
 
@@ -55,27 +68,20 @@ class RateSeed(BaseModel):
     is_public: bool = True
 
 
-class ProductConfig(BaseModel):
-    key: str = Field(min_length=2, max_length=40, pattern=r"^[a-z][a-z0-9_]{1,39}$")
-    name: str = Field(min_length=1, max_length=40)
-    short_name: str = Field(min_length=1, max_length=6)
-    unit_name: str = Field(min_length=1, max_length=8)
-
-
 class RulesConfig(BaseModel):
-    period_count: int = Field(default=4, ge=1, le=4)
-    period_duration_minutes: int = Field(default=15, ge=1, le=120)
-    trade_quantity: int = Field(default=1, ge=1, le=10)
+    period_count: int = Field(default=4, ge=4, le=4)
+    period_duration_minutes: int = Field(default=15, ge=15, le=15)
+    trade_quantity: int = Field(default=1, ge=1, le=1)
     same_market_trade_block: bool = True
-    challenge_start_period: int = Field(default=3, ge=1, le=4)
-    challenge_default_difficulty: int = Field(default=3, ge=1, le=5)
-    challenge_occupied_difficulty: int = Field(default=4, ge=1, le=5)
-    challenge_cooldown_minutes: int = Field(default=3, ge=0, le=120)
-    ownership_rate_per_minute: int = Field(default=3, ge=0, le=1000)
-    magic_start_period: int = Field(default=1, ge=1, le=4)
+    challenge_start_period: int = Field(default=3, ge=3, le=3)
+    challenge_default_difficulty: int = Field(default=3, ge=3, le=3)
+    challenge_occupied_difficulty: int = Field(default=4, ge=4, le=4)
+    challenge_cooldown_minutes: int = Field(default=3, ge=3, le=3)
+    ownership_rate_per_minute: int = Field(default=3, ge=3, le=3)
+    magic_start_period: int = Field(default=1, ge=1, le=1)
     magic_reward_by_difficulty: list[int] = Field(default_factory=lambda: [1, 3, 5, 10, 20], min_length=5, max_length=5)
-    black_market_start_period: int = Field(default=2, ge=1, le=4)
-    black_market_draw_cost: int = Field(default=10, ge=0, le=100000)
+    black_market_start_period: int = Field(default=2, ge=2, le=2)
+    black_market_draw_cost: int = Field(default=10, ge=10, le=10)
     guard_money_pouch: bool = True
     guard_minimum_team_present: bool = True
 
@@ -99,24 +105,16 @@ class MapConfig(BaseModel):
 
 
 class GameConfigPayload(BaseModel):
-    products: list[ProductConfig] = Field(default_factory=lambda: [ProductConfig(**item) for item in DEFAULT_PRODUCTS], min_length=4, max_length=4)
+    products: list[dict[str, str]] = Field(default_factory=lambda: deepcopy(DEFAULT_PRODUCTS), min_length=4, max_length=4)
     rules: RulesConfig = Field(default_factory=lambda: RulesConfig(**DEFAULT_RULES))
     map: MapConfig = Field(default_factory=MapConfig)
 
     @model_validator(mode="after")
     def validate_config(self):
-        if len({product.key for product in self.products}) != len(self.products):
-            raise ValueError("商品交易識別碼不可重複。")
-        if len({product.name for product in self.products}) != len(self.products):
-            raise ValueError("商品名稱不可重複，避免現場辨識錯誤。")
-        if self.rules.challenge_start_period > self.rules.period_count:
-            raise ValueError("據點挑戰開放時段不可晚於總時段數。")
-        if self.rules.magic_start_period > self.rules.period_count:
-            raise ValueError("隱藏魔王開放時段不可晚於總時段數。")
-        if self.rules.black_market_start_period > self.rules.period_count:
-            raise ValueError("黑心商人開放時段不可晚於總時段數。")
-        if any(reward < 0 for reward in self.rules.magic_reward_by_difficulty):
-            raise ValueError("魔王獎勵不可為負數。")
+        if self.products != DEFAULT_PRODUCTS:
+            raise ValueError("物資名稱與交易識別碼依遊戲規則固定，不能修改。")
+        if self.rules.model_dump() != DEFAULT_RULES:
+            raise ValueError("時段、獎勵與互動規則依遊戲規則固定，不能修改。")
         return self
 
 
@@ -134,7 +132,6 @@ class SessionBootstrapRequest(BaseModel):
     scheduled_start: datetime | None = None
     teams: list[TeamSeed] = Field(default_factory=_default_teams)
     markets: list[MarketSeed] = Field(default_factory=_default_markets)
-    rates: list[RateSeed] = Field(default_factory=list)
     config: GameConfigPayload = Field(default_factory=GameConfigPayload)
 
     @model_validator(mode="after")
@@ -149,12 +146,6 @@ class SessionBootstrapRequest(BaseModel):
             raise ValueError("小隊名稱不可重複。")
         if len({market.name for market in self.markets}) != len(self.markets):
             raise ValueError("市場名稱不可重複。")
-        invalid_codes = {rate.market_code.upper() for rate in self.rates} - set(MARKET_CODES)
-        if invalid_codes:
-            raise ValueError(f"行情包含不存在的市場代碼：{', '.join(sorted(invalid_codes))}")
-        invalid_products = {rate.resource_type for rate in self.rates} - {product.key for product in self.config.products}
-        if invalid_products:
-            raise ValueError(f"行情包含不存在的商品識別碼：{', '.join(sorted(invalid_products))}")
         return self
 
 
@@ -180,20 +171,17 @@ async def bootstrap_session(
 
     async with pool.acquire() as connection:
         async with connection.transaction():
+            fixed_config = normalize_config(payload.config.model_dump())
             session_id = await connection.fetchval(
                 "INSERT INTO game_sessions (name, status, scheduled_start, config) VALUES ($1, $2, $3, $4::jsonb) RETURNING id",
                 payload.name,
                 status,
                 payload.scheduled_start,
-                json.dumps(payload.config.model_dump()),
+                json.dumps(fixed_config),
             )
             await connection.execute("INSERT INTO game_event_counters (session_id) VALUES ($1)", session_id)
-            village_duration = payload.config.rules.period_count * payload.config.rules.period_duration_minutes
-            default_stages = (
-                ("破冰", "icebreaker", 1, 0, 30, {}),
-                ("純計分", "score_only", 2, 30 * 60_000, 45, {}),
-                ("活米村", "magic_village", 3, 75 * 60_000, village_duration, {"legacy_period_count": payload.config.rules.period_count}),
-            )
+            village_duration = DEFAULT_RULES["period_count"] * DEFAULT_RULES["period_duration_minutes"]
+            default_stages = (("活米村", "magic_village", 1, 0, village_duration, {"period_count": DEFAULT_RULES["period_count"]}),)
             stage_ids: list[UUID] = []
             for name, stage_type, sort_order, start_offset_ms, duration_minutes, config in default_stages:
                 stage_ids.append(await connection.fetchval(
@@ -251,16 +239,13 @@ async def bootstrap_session(
                     team.tone,
                 )
                 team_ids.append(team_id)
-                await connection.execute("INSERT INTO team_wallets (team_id, balance) VALUES ($1, $2)", team_id, team.initial_money)
-                inventory_seed = team.initial_inventory.as_dict()
-                for index, product in enumerate(payload.config.products):
-                    legacy_key = DEFAULT_PRODUCTS[index]["key"]
-                    quantity = inventory_seed.get(product.key, inventory_seed.get(legacy_key, 0))
+                await connection.execute("INSERT INTO team_wallets (team_id, balance) VALUES ($1, $2)", team_id, INITIAL_MONEY)
+                for product in DEFAULT_PRODUCTS:
                     await connection.execute(
                         "INSERT INTO team_inventory (team_id, resource_type, quantity) VALUES ($1, $2, $3)",
                         team_id,
-                        product.key,
-                        quantity,
+                        product["key"],
+                        DEFAULT_INITIAL_INVENTORY[product["key"]],
                     )
 
             market_ids: dict[str, UUID] = {}
@@ -275,23 +260,35 @@ async def bootstrap_session(
                 )
                 market_ids[code] = market_id
 
-            for rate in payload.rates:
+            for rate in default_rates():
                 await connection.execute(
                     """
                     INSERT INTO market_rates (market_id, period, resource_type, buy_price, sell_price, is_public)
                     VALUES ($1, $2, $3, $4, $5, $6)
                     """,
-                    market_ids[rate.market_code.upper()],
-                    rate.period,
-                    rate.resource_type,
-                    rate.buy_price,
-                    rate.sell_price,
-                    rate.is_public,
+                    market_ids[rate["market_code"]],
+                    rate["period"],
+                    rate["resource_type"],
+                    rate["buy_price"],
+                    rate["sell_price"],
+                    rate["is_public"],
+                )
+            for card in DEFAULT_BLACK_MARKET_CARDS:
+                await connection.execute(
+                    """
+                    INSERT INTO black_market_cards (session_id, name, description, effect_type, effect_config, enabled)
+                    VALUES ($1, $2, $3, $4, $5::jsonb, TRUE)
+                    """,
+                    session_id,
+                    card["name"],
+                    card["description"],
+                    card["effect_type"],
+                    json.dumps(card["effect_config"]),
                 )
             await connection.execute(
                 "INSERT INTO audit_logs (session_id, action, payload) VALUES ($1, 'session.bootstrap', $2::jsonb)",
                 session_id,
-                json.dumps({"teams": len(team_ids), "markets": len(market_ids), "rates": len(payload.rates)}),
+                json.dumps({"teams": len(team_ids), "markets": len(market_ids), "rates": len(default_rates()), "black_market_cards": len(DEFAULT_BLACK_MARKET_CARDS)}),
             )
 
     return SessionBootstrapResponse(
@@ -311,7 +308,7 @@ class TeamConfigUpdate(BaseModel):
     icon: str = Field(default="✦", min_length=1, max_length=4)
     description: str = Field(default="", max_length=120)
     tone: str = Field(default="aurora", pattern=rf"^({'|'.join(TEAM_TONES)})$")
-    initial_money: int = Field(ge=0)
+    initial_money: int = Field(default=INITIAL_MONEY, ge=INITIAL_MONEY, le=INITIAL_MONEY)
     initial_inventory: InventorySeed = Field(default_factory=InventorySeed)
 
 
@@ -330,59 +327,6 @@ async def _assert_editable_session(connection, session_id: UUID) -> None:
         raise HTTPException(status_code=409, detail={"code": "SESSION_LOCKED", "message": "場次開始後不能直接修改開局設定。"})
 
 
-async def _rename_product_identifiers(connection, session_id: UUID, previous_config: object, next_config: GameConfigPayload) -> None:
-    previous_products = normalize_config(previous_config)["products"]
-    renames = [
-        (old["key"], product.key, f"__product_rename_{uuid4().hex}")
-        for old, product in zip(previous_products, next_config.products, strict=True)
-        if old["key"] != product.key
-    ]
-    if not renames:
-        return
-
-    # Move every old value to a temporary namespace first so swapping identifiers
-    # (for example A -> B and B -> A) cannot collide with unique indexes.
-    for old_key, _, temporary_key in renames:
-        await connection.execute(
-            "UPDATE team_inventory SET resource_type = $1 WHERE resource_type = $2 AND team_id IN (SELECT id FROM teams WHERE session_id = $3)",
-            temporary_key,
-            old_key,
-            session_id,
-        )
-        await connection.execute(
-            "UPDATE market_rates SET resource_type = $1 WHERE resource_type = $2 AND market_id IN (SELECT id FROM markets WHERE session_id = $3)",
-            temporary_key,
-            old_key,
-            session_id,
-        )
-        await connection.execute(
-            "UPDATE transactions SET resource_type = $1 WHERE resource_type = $2 AND session_id = $3",
-            temporary_key,
-            old_key,
-            session_id,
-        )
-
-    for _, new_key, temporary_key in renames:
-        await connection.execute(
-            "UPDATE team_inventory SET resource_type = $1 WHERE resource_type = $2 AND team_id IN (SELECT id FROM teams WHERE session_id = $3)",
-            new_key,
-            temporary_key,
-            session_id,
-        )
-        await connection.execute(
-            "UPDATE market_rates SET resource_type = $1 WHERE resource_type = $2 AND market_id IN (SELECT id FROM markets WHERE session_id = $3)",
-            new_key,
-            temporary_key,
-            session_id,
-        )
-        await connection.execute(
-            "UPDATE transactions SET resource_type = $1 WHERE resource_type = $2 AND session_id = $3",
-            new_key,
-            temporary_key,
-            session_id,
-        )
-
-
 @router.get("/sessions/{session_id}")
 async def get_setup(
     session_id: UUID,
@@ -391,7 +335,7 @@ async def get_setup(
 ) -> dict[str, object]:
     require_session(context, session_id)
     session = await pool.fetchrow(
-        "SELECT id, name, status, scheduled_start, current_period, config FROM game_sessions WHERE id = $1",
+        "SELECT id, name, status, scheduled_start, current_period, manual_period_override, config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1",
         session_id,
     )
     if session is None:
@@ -421,8 +365,10 @@ async def get_setup(
         """,
         session_id,
     )
+    session_summary = {key: value for key, value in dict(session).items() if key not in {"config", "started_at", "paused_at", "accumulated_pause_ms"}}
+    session_summary["current_period"] = live_period(session, DEFAULT_RULES)
     return {
-        "session": {key: value for key, value in dict(session).items() if key != "config"},
+        "session": session_summary,
         "config": normalize_config(session["config"]),
         "teams": [dict(team) for team in teams],
         "markets": [dict(market) for market in markets],
@@ -441,18 +387,16 @@ async def update_config(
     async with pool.acquire() as connection:
         async with connection.transaction():
             await _assert_editable_session(connection, session_id)
-            previous_config = await connection.fetchval("SELECT config FROM game_sessions WHERE id = $1", session_id)
-            await _rename_product_identifiers(connection, session_id, previous_config, payload)
             await connection.execute(
                 "UPDATE game_sessions SET config = $1::jsonb, updated_at = NOW() WHERE id = $2",
-                json.dumps(payload.model_dump()),
+                json.dumps(normalize_config(payload.model_dump())),
                 session_id,
             )
             await connection.execute(
                 "INSERT INTO audit_logs (session_id, actor_id, action, payload) VALUES ($1, $2, 'setup.config.update', $3::jsonb)",
                 session_id,
                 context.access_id,
-                json.dumps({"products": len(payload.products), "rules": payload.rules.model_dump()}),
+                json.dumps({"map_updated": True}),
             )
     return {"updated": True}
 
@@ -488,8 +432,8 @@ async def update_teams(
                     f"第 {team.number} 隊・{team.name}",
                     team_id,
                 )
-                await connection.execute("UPDATE team_wallets SET balance = $1, updated_at = NOW() WHERE team_id = $2", team.initial_money, team_id)
-                for resource_type, quantity in team.initial_inventory.as_dict().items():
+                await connection.execute("UPDATE team_wallets SET balance = $1, updated_at = NOW() WHERE team_id = $2", INITIAL_MONEY, team_id)
+                for resource_type, quantity in DEFAULT_INITIAL_INVENTORY.items():
                     await connection.execute(
                         "UPDATE team_inventory SET quantity = $1, updated_at = NOW() WHERE team_id = $2 AND resource_type = $3",
                         quantity,
@@ -544,38 +488,7 @@ async def upsert_rates(
     context: AuthContext = Depends(require_roles("coordinator")),
 ) -> dict[str, object]:
     require_session(context, session_id)
-    async with pool.acquire() as connection:
-        async with connection.transaction():
-            await _assert_editable_session(connection, session_id)
-            stored_config = normalize_config(await connection.fetchval("SELECT config FROM game_sessions WHERE id = $1", session_id))
-            allowed_products = {product["key"] for product in stored_config["products"]}
-            invalid_products = sorted({rate.resource_type for rate in payload.rates} - allowed_products)
-            if invalid_products:
-                raise HTTPException(status_code=422, detail={"code": "PRODUCT_NOT_CONFIGURED", "message": f"找不到商品識別碼：{', '.join(invalid_products)}"})
-            markets = await connection.fetch("SELECT id, code FROM markets WHERE session_id = $1", session_id)
-            market_ids = {market["code"]: market["id"] for market in markets}
-            missing = sorted({rate.market_code.upper() for rate in payload.rates} - market_ids.keys())
-            if missing:
-                raise HTTPException(status_code=422, detail={"code": "MARKET_NOT_FOUND", "message": f"找不到市場：{', '.join(missing)}"})
-            for rate in payload.rates:
-                await connection.execute(
-                    """
-                    INSERT INTO market_rates (market_id, period, resource_type, buy_price, sell_price, is_public)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    ON CONFLICT (market_id, period, resource_type)
-                    DO UPDATE SET buy_price = EXCLUDED.buy_price, sell_price = EXCLUDED.sell_price, is_public = EXCLUDED.is_public
-                    """,
-                    market_ids[rate.market_code.upper()],
-                    rate.period,
-                    rate.resource_type,
-                    rate.buy_price,
-                    rate.sell_price,
-                    rate.is_public,
-                )
-            await connection.execute(
-                "INSERT INTO audit_logs (session_id, actor_id, action, payload) VALUES ($1, $2, 'rates.upsert', $3::jsonb)",
-                session_id,
-                context.access_id,
-                json.dumps({"count": len(payload.rates)}),
-            )
-    return {"updated": len(payload.rates)}
+    raise HTTPException(
+        status_code=409,
+        detail={"code": "MARKET_RATES_FIXED", "message": "市場行情依遊戲規則固定，不能在系統內修改。"},
+    )

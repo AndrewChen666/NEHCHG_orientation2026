@@ -5,7 +5,6 @@ from ..db import get_pool
 from ..game_config import TEAM_COUNT
 
 router = APIRouter(prefix="/api/v1/public", tags=["public"])
-PUBLIC_TEAM_COUNT = 4
 
 
 @router.get("/home")
@@ -36,6 +35,6 @@ async def get_home_content(pool: Pool = Depends(get_pool)) -> dict[str, object]:
         ORDER BY number
         """,
         session["id"],
-        min(TEAM_COUNT, PUBLIC_TEAM_COUNT),
+        TEAM_COUNT,
     )
     return {"session": dict(session), "teams": [dict(team) for team in teams]}

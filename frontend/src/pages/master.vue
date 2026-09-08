@@ -1,10 +1,10 @@
 <template>
-  <GameShell role-label="市場關主" :identity="`${marketCode} 市場`" section="市場工作板" kicker="MARKET MASTER DESK" :title="`${marketCode} 市場，快速處理。`" subtitle="行情、交易、挑戰都集中在同一頁；先選隊伍，再按結果。" :nav-items="navItems" :hide-page-heading="true" :connected="!isDemo" :demo="isDemo" :period="board.session.current_period" :elapsed-ms="sessionElapsedMs" :status="board.session.status" :money="0" @sign-out="goLogin">
+  <GameShell role-label="市場關主" :identity="`${marketCode} 市場`" :nav-items="navItems" :hide-page-heading="true" :connected="!isDemo" :demo="isDemo" :period="board.session.current_period" :elapsed-ms="sessionElapsedMs" :status="board.session.status" :money="0" @sign-out="goLogin">
 
     <div class="field-board master-board">
-      <section class="board-panel master-owner">
-        <div class="master-owner__label"><span class="step-label">市場狀態</span><strong>目前佔領隊伍</strong></div>
-        <label class="owner-select-field">
+      <header class="master-owner">
+        <div class="master-owner__label"><h1>{{ marketCode }} 市場</h1><p>先記錄交易；佔領狀態有變化時再更新。</p></div>
+        <label class="owner-select-field"><span>目前佔領隊伍</span>
           <span class="sr-only">選擇目前佔領隊伍</span>
           <select v-model="selectedOwnerTeamId" aria-label="選擇目前佔領隊伍" @change="handleOwnerSelection">
             <option value="">尚未佔領</option>
@@ -12,15 +12,15 @@
           </select>
         </label>
         <div class="master-owner__meta"><div class="owner-duration"><span>{{ currentOwner ? '目前已佔領' : '佔領狀態' }}</span><strong>{{ currentOwner ? formatDuration(ownerDurationMs) : '尚未佔領' }}</strong><small v-if="currentOwner">收益 {{ board.config.rules.ownership_rate_per_minute }} 枚／分鐘</small></div><span class="status-badge" :class="currentOwner ? 'is-success' : 'is-neutral'">{{ currentOwner ? '已佔領' : '尚未佔領' }}</span></div>
-      </section>
+      </header>
 
       <div class="master-main">
         <section class="board-panel master-trade">
-          <div class="board-panel__head"><div><span class="step-label">現場第一優先</span><h2>登錄交易</h2><p>選擇買入或售出、商品、隊伍與數量，確認後立即生效。</p></div><span class="status-badge is-neutral">{{ direction === 'buy' ? '買入' : '售出' }}</span></div>
-          <div class="direction-switch" aria-label="選擇交易方向"><button class="ghost-button" :class="{ 'is-selected': direction === 'buy' }" type="button" @click="direction = 'buy'">買入</button><button class="ghost-button" :class="{ 'is-selected': direction === 'sell' }" type="button" @click="direction = 'sell'">售出</button></div>
+          <div class="board-panel__head"><div><h2>記錄一筆交易</h2><p>選擇買入或售出、商品、隊伍與數量；確認後立即生效。</p></div><span class="status-badge is-neutral">{{ direction === 'buy' ? '買入' : '售出' }}</span></div>
+          <div class="direction-switch" aria-label="選擇交易方向"><button class="ghost-button" :class="{ 'is-selected': direction === 'buy' }" type="button" @click="selectDirection('buy')">買入</button><button class="ghost-button" :class="{ 'is-selected': direction === 'sell' }" type="button" @click="selectDirection('sell')">售出</button></div>
           <div class="trade-controls">
-            <label class="form-field compact-field"><span>商品</span><select v-model="selectedResource"><option v-for="rate in currentRates" :key="rate.resource_type" :value="rate.resource_type">{{ resourceFor(rate.resource_type).name }}</option></select><small v-if="selectedRate">買入 {{ selectedRate.buy_price > 0 ? `${selectedRate.buy_price} 枚` : '停止' }}・售出 {{ selectedRate.sell_price }} 枚</small></label>
-            <label class="form-field compact-field quantity-field"><span>數量</span><input v-model.number="quantity" min="1" max="999" type="number" inputmode="numeric" /></label>
+            <label class="form-field compact-field"><span>商品</span><select v-model="selectedResource"><option v-for="rate in availableRates" :key="rate.resource_type" :value="rate.resource_type">{{ resourceFor(rate.resource_type).name }}</option></select><small v-if="selectedRate">買入 {{ selectedRate.buy_price > 0 ? `${selectedRate.buy_price} 枚` : '停止' }}・售出 {{ selectedRate.sell_price > 0 ? `${selectedRate.sell_price} 枚` : '停止' }}</small></label>
+            <label class="form-field compact-field quantity-field"><span>數量</span><input v-model.number="quantity" min="1" max="5" type="number" inputmode="numeric" /></label>
           </div>
           <label class="form-field compact-field trade-team-field"><span>隊伍</span><select v-model="selectedTeamId"><option v-for="team in teams" :key="team.id" :value="team.id">小隊 {{ team.number }}・{{ team.name }}（{{ team.money }} 枚）</option></select></label>
           <div class="trade-total"><span>{{ direction === 'buy' ? '小隊支出' : '小隊取得' }}</span><strong>{{ totalAmount }} 枚</strong><em>{{ selectedTeamName }}・{{ resourceFor(selectedResource).name }} × {{ quantity }}</em></div>
@@ -30,7 +30,7 @@
         </section>
 
         <section class="board-panel master-failure">
-          <div class="board-panel__head"><div><span class="step-label">現場紀錄</span><h2>新增佔領失敗紀錄</h2><p>挑戰未成功時，選隊伍並留下備註。</p></div><span class="status-badge is-neutral">只新增紀錄</span></div>
+          <div class="board-panel__head"><div><h2>記錄佔領失敗</h2><p>挑戰未成功時，選擇隊伍並留下備註。</p></div><span class="status-badge is-neutral">只新增紀錄</span></div>
           <div class="failure-form">
             <label class="form-field compact-field"><span>隊伍</span><select v-model="failureTeamId"><option v-for="team in teams" :key="team.id" :value="team.id">小隊 {{ team.number }}・{{ team.name }}</option></select></label>
             <label class="form-field compact-field"><span>備註（選填）</span><input v-model.trim="failureNote" type="text" maxlength="500" placeholder="例如：未完成現場任務" /></label>
@@ -50,7 +50,7 @@ import { useRouter } from 'vue-router'
 import Icon from '@/components/Icon.vue'
 import GameShell from '@/layouts/GameShell.vue'
 import { ApiError, createTransaction, getMarketBoard, recordMarketFailure, updateMarketOwnership } from '@/lib/api'
-import { cloneDefaultConfig } from '@/lib/gameConfig'
+import { cloneDefaultConfig, defaultMarketRates } from '@/lib/gameConfig'
 import { useSession } from '@/lib/session'
 import type { MarketBoard, MarketSummary, ProductConfig, ResourceKey, SetupRate } from '@/types/game'
 
@@ -86,6 +86,7 @@ const sessionElapsedMs = computed(() => {
   return board.session.status === 'running' ? base + clockNow.value - clockStartedAt.value : base
 })
 const currentRates = computed(() => board.rates.filter((rate) => rate.market_code === marketCode.value && rate.period === board.session.current_period))
+const availableRates = computed(() => currentRates.value.filter((rate) => (direction.value === 'buy' ? rate.buy_price : rate.sell_price) > 0))
 const teams = computed(() => board.teams || [])
 const selectedTeam = computed(() => teams.value.find((team) => team.id === selectedTeamId.value))
 const selectedTeamName = computed(() => selectedTeam.value ? `小隊 ${selectedTeam.value.number}` : '尚未選擇小隊')
@@ -97,7 +98,7 @@ const hasEnoughAssets = computed(() => {
   if (!selectedTeam.value || quantity.value < 1) return false
   return direction.value === 'buy' ? selectedTeam.value.money >= totalAmount.value : (selectedTeam.value.inventory[selectedResource.value] || 0) >= quantity.value
 })
-const canSubmitTrade = computed(() => Boolean(selectedTeam.value && selectedRate.value && (direction.value === 'sell' || unitPrice.value > 0) && quantity.value >= 1 && guardsSatisfied.value && hasEnoughAssets.value))
+const canSubmitTrade = computed(() => Boolean(selectedTeam.value && selectedRate.value && unitPrice.value > 0 && quantity.value >= 1 && quantity.value <= 5 && guardsSatisfied.value && hasEnoughAssets.value))
 const currentOwner = computed(() => {
   const ownerId = currentMarket.value?.owner_team_id
   return teams.value.find((team) => team.id === ownerId) || (currentMarket.value?.owner_team_number ? { id: ownerId || '', number: currentMarket.value.owner_team_number, name: currentMarket.value.owner_team_name || String(currentMarket.value.owner_team_number) } : null)
@@ -116,6 +117,10 @@ onBeforeUnmount(() => { if (clockTimer) window.clearInterval(clockTimer) })
 async function loadBoard() {
   if (isDemo.value || !state.identity || !state.token) return
   try { Object.assign(board, await getMarketBoard(state.identity.session_id, state.token)); clockStartedAt.value = Date.now(); selectedTeamId.value = board.teams?.[0]?.id || ''; selectedOwnerTeamId.value = currentMarket.value?.owner_team_id || ''; failureTeamId.value = board.teams?.[0]?.id || ''; selectedResource.value = currentRates.value[0]?.resource_type || board.config.products[0]?.key || 'dragon_egg'; quantity.value = board.config.rules.trade_quantity } catch (error) { showError(error) }
+}
+function selectDirection(nextDirection: 'buy' | 'sell') {
+  direction.value = nextDirection
+  if (!availableRates.value.some((rate) => rate.resource_type === selectedResource.value)) selectedResource.value = availableRates.value[0]?.resource_type || ''
 }
 async function submitTrade() {
   const market = currentMarket.value
@@ -175,27 +180,29 @@ function requestId(prefix = 'master') { return typeof crypto !== 'undefined' && 
 function showError(error: unknown) { messageType.value = 'error'; message.value = error instanceof ApiError ? error.message : '目前無法完成關主操作。' }
 function goLogin() { router.push('/login') }
 function formatDuration(milliseconds: number) { const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000)); const hours = Math.floor(totalSeconds / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); const seconds = totalSeconds % 60; return hours ? `${hours} 小時 ${String(minutes).padStart(2, '0')} 分` : `${minutes} 分 ${String(seconds).padStart(2, '0')} 秒` }
-function demoBoard(): MarketBoard { const config = cloneDefaultConfig(); const markets = Array.from({ length: 8 }, (_, index) => { const code = String.fromCharCode(65 + index); return { id: `demo-${index}`, code, name: code, owner_team_id: index === 1 ? 'demo-team-3' : null, owner_team_number: index === 1 ? 3 : null, owner_team_name: index === 1 ? '3' : null, owner_started_elapsed_ms: index === 1 ? 360000 : null } }); const rates: SetupRate[] = config.products.map((resource, index) => ({ market_code: 'B', period: 2, resource_type: resource.key, buy_price: [12, 18, 8, 30][index] ?? 0, sell_price: [7, 9, 4, 2][index] ?? 0, is_public: index !== 1 })); const teams = Array.from({ length: 4 }, (_, index) => ({ id: `demo-team-${index + 3}`, number: index + 3, name: String(index + 3), money: [218, 164, 302, 96][index] ?? 0, inventory: { dragon_egg: index + 1, time_device: index, unicorn_blood: 2, basilisk_fang: 0 } })); return { session: { current_period: 2, status: 'running', effective_elapsed_ms: 1260000 }, markets, rates, wallet: null, inventory: [], teams, config } }
+function demoBoard(): MarketBoard { const config = cloneDefaultConfig(); const markets = Array.from({ length: 8 }, (_, index) => { const code = String.fromCharCode(65 + index); return { id: `demo-${index}`, code, name: code, owner_team_id: index === 1 ? 'demo-team-3' : null, owner_team_number: index === 1 ? 3 : null, owner_team_name: index === 1 ? '第 3 隊' : null, owner_started_elapsed_ms: index === 1 ? 360000 : null } }); const teams = Array.from({ length: 12 }, (_, index) => ({ id: `demo-team-${index + 1}`, number: index + 1, name: `第 ${index + 1} 隊`, money: 15 + index * 4, inventory: { dragon_egg: index + 1, time_device: index, unicorn_blood: 2, basilisk_fang: 0 } })); return { session: { current_period: 2, status: 'running', effective_elapsed_ms: 1260000 }, markets, rates: defaultMarketRates(), wallet: null, inventory: [], teams, config } }
 </script>
 
 <style scoped>
 .field-board { height: 100%; min-height: 0; }
-.master-board { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; }
-.board-panel { min-width: 0; padding: 14px; background: var(--color-surface); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); }
+.master-board { display: grid; gap: 14px; }
+.board-panel { min-width: 0; padding: 16px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
 .board-panel__head { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .board-panel__head h2 { margin-top: 3px; font-size: 17px; font-weight: 850; }
 .board-panel__head p { margin-top: 3px; color: var(--color-muted); font-size: 11px; }
-.step-label { color: var(--color-accent); font-size: 11px; font-weight: 850; }
-.master-owner { display: grid; grid-template-columns: minmax(160px, .8fr) minmax(220px, 1.2fr) auto; align-items: center; gap: 12px; padding-block: 12px; }
-.master-owner__label { display: grid; gap: 3px; }
-.master-owner__label strong { font-size: 15px; }
-.owner-select-field select { width: 100%; min-height: 40px; padding: 0 10px; color: var(--color-ink); background: var(--color-surface-raised); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-sm); font-size: 12px; }
-.owner-select-field select:focus { border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px var(--color-primary-soft); }
+.master-owner { display: grid; grid-template-columns: minmax(220px, .9fr) minmax(230px, 1.1fr) auto; align-items: end; gap: 18px; padding: 2px 2px 0; }
+.master-owner__label { display: grid; gap: 4px; }
+.master-owner__label h1 { font-size: 26px; letter-spacing: -.025em; }
+.master-owner__label p { color: var(--color-muted); font-size: 12px; line-height: 1.5; }
+.owner-select-field { display: grid; gap: 6px; }
+.owner-select-field > span:first-child { color: var(--color-ink); font-size: 11px; font-weight: 800; }
+.owner-select-field select { width: 100%; min-height: 42px; padding: 0 10px; color: var(--color-ink); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: 5px; font-size: 12px; }
+.owner-select-field select:focus { border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px oklch(0.47 0.105 240 / .14); }
 .master-owner__meta { display: flex; align-items: center; justify-content: flex-end; gap: 12px; color: var(--color-muted); font-size: 11px; white-space: nowrap; }
 .owner-duration { display: grid; gap: 1px; text-align: right; }
 .owner-duration span, .owner-duration small { color: var(--color-muted); font-size: 10px; }
 .owner-duration strong { color: var(--color-ink); font-size: 14px; font-variant-numeric: tabular-nums; }
-.master-main { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: 12px; min-height: 0; }
+.master-main { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(300px, .82fr); gap: 14px; min-height: 0; }
 .master-trade, .master-failure { display: flex; flex-direction: column; min-height: 0; }
 .compact-field { gap: 5px; }
 .compact-field > span { font-size: 11px; }
@@ -205,14 +212,14 @@ function demoBoard(): MarketBoard { const config = cloneDefaultConfig(); const m
 .trade-team-field { margin-top: 9px; }
 .direction-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 9px; }
 .direction-switch .ghost-button { min-height: 38px; font-size: 12px; }
-.direction-switch .is-selected { color: var(--color-ink); background: var(--color-primary); border-color: var(--color-accent); }
-.trade-total { display: grid; gap: 2px; margin-top: 9px; padding: 10px 12px; background: var(--color-primary-soft); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.direction-switch .is-selected { color: white; background: var(--color-primary); border-color: var(--color-primary); }
+.trade-total { display: grid; gap: 2px; margin-top: 12px; padding: 12px; background: var(--color-primary-soft); border: 1px solid oklch(0.82 0.032 240); border-radius: var(--radius-sm); }
 .trade-total span, .trade-total em { color: var(--color-muted); font-size: 10px; font-style: normal; }
-.trade-total strong { color: var(--color-accent); font-size: 22px; font-variant-numeric: tabular-nums; }
+.trade-total strong { color: var(--color-primary-strong); font-size: 24px; font-variant-numeric: tabular-nums; }
 .compact-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
 .check-row { display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 8px; background: var(--color-surface-quiet); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-sm); font-size: 10px; }
 .check-row input { width: 14px; height: 14px; accent-color: var(--color-primary); }
-.board-primary-action { width: 100%; min-height: 44px; margin-top: auto; font-size: 13px; }
+.board-primary-action { width: 100%; min-height: 46px; margin-top: auto; font-size: 13px; }
 .board-message { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--color-success); font-size: 11px; }
 .board-message.is-error { color: var(--color-danger); }
 .failure-form { display: grid; gap: 10px; }
@@ -222,7 +229,8 @@ function demoBoard(): MarketBoard { const config = cloneDefaultConfig(); const m
 @media (max-width: 900px) { .master-main { grid-template-columns: 1fr; } .field-board { height: auto; } }
 @media (max-width: 760px) { .master-owner { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) auto; } .master-owner__meta { min-width: 0; } .owner-duration { min-width: 0; } }
 @media (max-width: 560px) {
-  .master-owner { grid-template-columns: 1fr; align-items: stretch; }
+  .master-owner { grid-template-columns: 1fr; align-items: stretch; gap: 12px; }
+  .master-owner__label h1 { font-size: 23px; }
   .master-owner__meta { justify-content: space-between; white-space: normal; }
   .owner-duration { text-align: left; }
   .trade-controls { grid-template-columns: 1fr; }

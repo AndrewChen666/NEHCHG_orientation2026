@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_pool
 from ..dependencies import get_auth_context, require_roles, require_session
+from ..game_clock import current_period as live_period
 from ..game_config import normalize_config, rules_for
 from ..schemas import BlackMarketApplyRequest, BlackMarketDrawRequest, MagicChallengeRequest, MagicResultRequest
 from ..security import AuthContext
@@ -58,12 +59,13 @@ async def create_magic_challenge(
             )
             if existing:
                 return {"id": existing["id"], "status": existing["result"] or "pending", "replayed": True}
-            session = await connection.fetchrow("SELECT status, current_period, config FROM game_sessions WHERE id = $1", context.session_id)
+            session = await connection.fetchrow("SELECT status, config, started_at, paused_at, accumulated_pause_ms, manual_period_override FROM game_sessions WHERE id = $1", context.session_id)
             if session is None:
                 raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到遊戲場次。"})
             rules = rules_for(session["config"])
             _guard(payload, rules)
-            if session["status"] != "running" or not int(rules["magic_start_period"]) <= session["current_period"] <= int(rules["period_count"]):
+            period = live_period(session, rules)
+            if session["status"] != "running" or not int(rules["magic_start_period"]) <= period <= int(rules["period_count"]):
                 raise HTTPException(status_code=409, detail={"code": "MAGIC_NOT_AVAILABLE", "message": "目前不是隱藏魔王可挑戰的時段。"})
             team = await connection.fetchrow(
                 "SELECT id FROM teams WHERE id = $1 AND session_id = $2",
@@ -233,14 +235,15 @@ async def draw_black_market_card(
             )
             if existing:
                 return {"id": existing["id"], "name": existing["name"], "description": existing["description"], "effect_type": existing["effect_type"], "effect_config": existing["effect_config"], "requires_manual_apply": True, "replayed": True}
-            session = await connection.fetchrow("SELECT status, current_period, config FROM game_sessions WHERE id = $1", context.session_id)
+            session = await connection.fetchrow("SELECT status, config, started_at, paused_at, accumulated_pause_ms, manual_period_override FROM game_sessions WHERE id = $1", context.session_id)
             if session is None:
                 raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到遊戲場次。"})
             rules = rules_for(session["config"])
             _guard(payload, rules)
             black_market_start = int(rules["black_market_start_period"])
             draw_cost = int(rules["black_market_draw_cost"])
-            if session["status"] != "running" or not black_market_start <= session["current_period"] <= int(rules["period_count"]):
+            period = live_period(session, rules)
+            if session["status"] != "running" or not black_market_start <= period <= int(rules["period_count"]):
                 raise HTTPException(status_code=409, detail={"code": "BLACK_MARKET_NOT_AVAILABLE", "message": f"黑心商人從第 {black_market_start} 時段開始出現。"})
             wallet = await connection.fetchrow("SELECT balance FROM team_wallets WHERE team_id = $1 FOR UPDATE", context.team_id)
             if wallet is None or wallet["balance"] < draw_cost:
@@ -280,7 +283,7 @@ async def apply_black_market_effect(
     async with pool.acquire() as connection:
         async with connection.transaction():
             effect = await connection.fetchrow(
-                "SELECT e.*, c.name, c.effect_type FROM black_market_effects e JOIN black_market_cards c ON c.id = e.card_id WHERE e.id = $1 FOR UPDATE",
+                "SELECT e.*, c.name, c.effect_type, c.effect_config FROM black_market_effects e JOIN black_market_cards c ON c.id = e.card_id WHERE e.id = $1 FOR UPDATE",
                 effect_id,
             )
             if effect is None or effect["session_id"] != context.session_id:
@@ -289,6 +292,20 @@ async def apply_black_market_effect(
                 raise HTTPException(status_code=403, detail={"code": "EFFECT_SCOPE_INVALID", "message": "這張效果卡不屬於目前隊伍。"})
             if effect["status"] != "drawn":
                 raise HTTPException(status_code=409, detail={"code": "EFFECT_ALREADY_APPLIED", "message": "這張效果卡已經處理過。"})
+            automated = effect["effect_type"] == "grant_money"
+            if automated:
+                amount = int((effect["effect_config"] or {}).get("amount", 0))
+                if amount <= 0:
+                    raise HTTPException(status_code=409, detail={"code": "EFFECT_CONFIG_INVALID", "message": "這張效果卡缺少可發放的金額。"})
+                await connection.execute("UPDATE team_wallets SET balance = balance + $1, updated_at = NOW() WHERE team_id = $2", amount, effect["team_id"])
+                await connection.execute(
+                    "INSERT INTO money_ledger (session_id, team_id, amount, reason, reference_id, created_by) VALUES ($1, $2, $3, 'black_market_grant', $4, $5)",
+                    context.session_id,
+                    effect["team_id"],
+                    amount,
+                    effect_id,
+                    context.access_id,
+                )
             await connection.execute("UPDATE black_market_effects SET status = 'applied', applied_by = $1, applied_at = NOW() WHERE id = $2", context.access_id, effect_id)
             await connection.execute(
                 "INSERT INTO audit_logs (session_id, actor_id, action, target_type, target_id, payload) VALUES ($1, $2, 'black_market.apply', 'black_market_effect', $3, $4::jsonb)",
@@ -297,4 +314,4 @@ async def apply_black_market_effect(
                 effect_id,
                 json.dumps({"card": effect["name"], "effect_type": effect["effect_type"], "note": payload.note}),
             )
-    return {"id": effect_id, "status": "applied", "requires_manual_apply": True}
+    return {"id": effect_id, "status": "applied", "requires_manual_apply": not automated}

@@ -1,6 +1,6 @@
 export type Role = 'coordinator' | 'participant' | 'team_facilitator' | 'icebreaker_facilitator' | 'score_keeper' | 'market_master' | 'magic_boss'
 export type SessionStatus = 'draft' | 'scheduled' | 'running' | 'paused' | 'finished'
-/** Per-session product identifiers are editable, so this is intentionally not a fixed union. */
+/** Server-enforced product identifiers from the published game rules. */
 export type ResourceKey = string
 
 export interface ProductConfig {
@@ -63,6 +63,7 @@ export interface SessionSummary {
   scheduled_start?: string | null
   started_at?: string | null
   current_period: number
+  manual_period_override?: number | null
   effective_elapsed_ms: number
 }
 
@@ -234,6 +235,7 @@ export interface MarketBoard {
   markets: MarketSummary[]
   rates: SetupRate[]
   teams?: MarketTeamSummary[]
+  team?: { id: string; number: number; name: string } | null
   wallet?: number | null
   inventory: { resource_type: string; quantity: number }[]
 }

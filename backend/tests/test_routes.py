@@ -15,6 +15,7 @@ class RouteContractTest(TestCase):
             "/api/v1/stages/{stage_id}/icebreaker/groups",
             "/api/v1/stages/{stage_id}/scores",
             "/api/v1/sessions/{session_id}/leaderboards",
+            "/api/v1/sessions/{session_id}/period",
         }
         self.assertTrue(expected.issubset(paths))
         self.assertNotIn("/api/v1/auth/code-login", paths)

@@ -35,6 +35,7 @@ class SessionSummary(BaseModel):
     scheduled_start: datetime | None = None
     started_at: datetime | None = None
     current_period: int
+    manual_period_override: int | None = None
     effective_elapsed_ms: int
 
 
@@ -102,6 +103,12 @@ class BlackMarketApplyRequest(BaseModel):
 class ClockActionResponse(BaseModel):
     session: SessionSummary
     event_sequence: int | None = None
+
+
+class PeriodOverrideRequest(BaseModel):
+    """A coordinator may temporarily pin a live period, or clear it to resume the clock."""
+
+    period: int | None = Field(default=None, ge=1, le=4)
 
 
 class GoogleLoginRequest(BaseModel):

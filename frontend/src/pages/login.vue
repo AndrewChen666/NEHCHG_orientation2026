@@ -14,8 +14,6 @@
         <div><span>活動主題</span><strong>MAGIC & SCIENCE</strong></div>
       </div>
 
-      <div class="login-art__seal" aria-hidden="true"><img class="login-art__seal-icon" src="/icon.png" alt="" /><small>2026</small></div>
-      <div class="login-art__astral" aria-hidden="true"><span></span><i></i><b></b></div>
     </section>
 
     <section class="login-panel">
@@ -230,5 +228,25 @@ onBeforeUnmount(() => {
   .login-help { align-items: flex-start; }
   .login-art { padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right)); }
 }
+/* Login is an entry point, not a themed set piece. */
+.login-page { --login-bg: var(--color-bg); --login-ink: var(--color-ink); --login-muted: var(--color-muted); --login-accent: var(--color-primary); color: var(--login-ink); background: var(--login-bg); }
+.login-art { min-height: 100dvh; background: var(--color-bg-deep); }
+.login-art::before { background: linear-gradient(90deg, oklch(.22 .03 245 / .94), oklch(.22 .03 245 / .76)), url('/orientation-hero.jpg') 63% 42% / cover no-repeat; opacity: 1; mix-blend-mode: normal; filter: grayscale(.2) contrast(1.02); }
+.login-art::after, .login-art__seal, .login-art__astral { display: none; }
+.login-art__topline { color: oklch(.82 .018 245); letter-spacing: .08em; }
+.login-art__topline .brand-mark, .mobile-brand .brand-mark { filter: none; }
+.login-art__copy h1 { color: white; font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif; font-weight: 800; letter-spacing: -.025em; }
+.login-art__copy h1 em { color: oklch(.88 .05 80); }
+.login-art__copy p, .login-art__ledger span { color: oklch(.82 .018 245); }
+.login-art__ledger { border-top-color: oklch(1 0 0 / .22); }
+.login-art__ledger strong { color: white; font-family: inherit; font-weight: 700; }
+.login-panel { background: var(--color-surface); border-left-color: var(--color-border); }
+.login-panel::before, .login-panel::after { background: var(--color-border); }
+.mobile-brand strong, .login-panel h2 { color: var(--color-ink); font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif; font-weight: 800; }
+.login-panel h2 { font-size: 28px; }
+.login-lead, .login-help, .google-login-loading { color: var(--color-muted); }
+.login-help { border-top-color: var(--color-border); }
+.login-help .icon { color: var(--color-primary); }
+@media (max-width: 680px) { .login-art { min-height: 220px; } .login-panel { border: 0; } }
 @media (prefers-reduced-motion: reduce) { .login-form input, .login-submit { transition: none; } }
 </style>

@@ -31,7 +31,7 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 npm install
 ```
 
-複製 `.env.example` 為 `.env` 後，再將 API／WebSocket 位址改成實際 FastAPI 服務。前端不直接寫 Supabase，所有遊戲狀態變更都透過後端 API。
+請在專案根目錄複製 `.env.example` 為 `.env`，再將 API／WebSocket 位址改成實際 FastAPI 服務。前端會讀取根目錄環境設定，但只使用 `VITE_*` 變數；不直接寫 Supabase，所有遊戲狀態變更都透過後端 API。
 
 ### Compile and Hot-Reload for Development
 
