@@ -12,6 +12,7 @@ from ..config import Settings, get_settings
 from ..db import get_pool
 from ..dependencies import require_roles, require_session
 from ..game_clock import current_period as live_period
+from ..game_seed import ensure_fixed_game_data
 from ..game_config import (
     DEFAULT_BLACK_MARKET_CARDS,
     DEFAULT_INITIAL_INVENTORY,
@@ -334,10 +335,14 @@ async def get_setup(
     context: AuthContext = Depends(require_roles("coordinator")),
 ) -> dict[str, object]:
     require_session(context, session_id)
-    session = await pool.fetchrow(
-        "SELECT id, name, status, scheduled_start, current_period, manual_period_override, config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1",
-        session_id,
-    )
+    async with pool.acquire() as connection:
+        async with connection.transaction():
+            session = await connection.fetchrow(
+                "SELECT id, name, status, scheduled_start, current_period, manual_period_override, config, started_at, paused_at, accumulated_pause_ms FROM game_sessions WHERE id = $1 FOR UPDATE",
+                session_id,
+            )
+            if session is not None and session["status"] in {"draft", "scheduled"}:
+                await ensure_fixed_game_data(connection, session_id)
     if session is None:
         raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
     teams = await pool.fetch(

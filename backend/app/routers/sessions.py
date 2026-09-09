@@ -8,6 +8,7 @@ from ..activity import get_current_stage
 from ..dependencies import get_auth_context, get_event_broker, require_roles, require_session
 from ..game_clock import current_period, effective_elapsed_ms
 from ..game_config import normalize_config, rules_for
+from ..game_seed import ensure_fixed_game_data
 from ..ownership import settle_ownership
 from ..realtime import EventBroker
 from ..schemas import ClockActionResponse, PeriodOverrideRequest, SessionSummary
@@ -144,6 +145,8 @@ async def _change_status(
             if row["status"] not in allowed_from[action]:
                 raise HTTPException(status_code=409, detail={"code": "CLOCK_ACTION_UNAVAILABLE", "message": "目前場次狀態不能執行這個時鐘操作。"})
             status, clause = updates[action]
+            if action == "start":
+                await ensure_fixed_game_data(connection, session_id)
             if action == "finish":
                 await settle_ownership(connection, row, final=True)
                 await connection.execute(

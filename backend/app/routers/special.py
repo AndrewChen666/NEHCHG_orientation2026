@@ -8,6 +8,7 @@ from ..db import get_pool
 from ..dependencies import get_auth_context, require_roles, require_session
 from ..game_clock import current_period as live_period
 from ..game_config import normalize_config, rules_for
+from ..ownership import close_active_ownership, settle_ownership
 from ..schemas import BlackMarketApplyRequest, BlackMarketDrawRequest, MagicChallengeRequest, MagicResultRequest
 from ..security import AuthContext
 
@@ -278,7 +279,7 @@ async def apply_black_market_effect(
     effect_id: UUID,
     payload: BlackMarketApplyRequest,
     pool: Pool = Depends(get_pool),
-    context: AuthContext = Depends(get_auth_context),
+    context: AuthContext = Depends(require_roles("team_facilitator", "coordinator")),
 ) -> dict[str, object]:
     async with pool.acquire() as connection:
         async with connection.transaction():
@@ -292,8 +293,16 @@ async def apply_black_market_effect(
                 raise HTTPException(status_code=403, detail={"code": "EFFECT_SCOPE_INVALID", "message": "這張效果卡不屬於目前隊伍。"})
             if effect["status"] != "drawn":
                 raise HTTPException(status_code=409, detail={"code": "EFFECT_ALREADY_APPLIED", "message": "這張效果卡已經處理過。"})
-            automated = effect["effect_type"] == "grant_money"
-            if automated:
+            automated = effect["effect_type"] in {"grant_money", "manual_ownership_bonus", "manual_return_all_ownership"}
+            session = await connection.fetchrow(
+                "SELECT id, status, config, started_at, paused_at, accumulated_pause_ms, manual_period_override FROM game_sessions WHERE id = $1 FOR UPDATE",
+                context.session_id,
+            )
+            if session is None:
+                raise HTTPException(status_code=404, detail={"code": "SESSION_NOT_FOUND", "message": "找不到這個遊戲場次。"})
+            if automated and session["status"] != "running":
+                raise HTTPException(status_code=409, detail={"code": "EFFECT_NOT_AVAILABLE", "message": "遊戲暫停或結束時不能套用會改變資產的卡片效果。"})
+            if effect["effect_type"] == "grant_money":
                 amount = int((effect["effect_config"] or {}).get("amount", 0))
                 if amount <= 0:
                     raise HTTPException(status_code=409, detail={"code": "EFFECT_CONFIG_INVALID", "message": "這張效果卡缺少可發放的金額。"})
@@ -306,6 +315,25 @@ async def apply_black_market_effect(
                     effect_id,
                     context.access_id,
                 )
+            elif effect["effect_type"] == "manual_ownership_bonus":
+                rate = int((effect["effect_config"] or {}).get("rate_per_minute", 0))
+                if rate <= 0:
+                    raise HTTPException(status_code=409, detail={"code": "EFFECT_CONFIG_INVALID", "message": "這張效果卡缺少據點收益設定。"})
+                await settle_ownership(connection, session, final=False, actor_id=context.access_id)
+                await connection.execute(
+                    "UPDATE market_ownership SET rate_per_minute = $1 WHERE session_id = $2 AND team_id = $3 AND ended_at IS NULL",
+                    rate,
+                    context.session_id,
+                    effect["team_id"],
+                )
+            elif effect["effect_type"] == "manual_return_all_ownership":
+                active_markets = await connection.fetch(
+                    "SELECT market_id FROM market_ownership WHERE session_id = $1 AND team_id = $2 AND ended_at IS NULL",
+                    context.session_id,
+                    effect["team_id"],
+                )
+                for ownership in active_markets:
+                    await close_active_ownership(connection, session, ownership["market_id"], context.access_id)
             await connection.execute("UPDATE black_market_effects SET status = 'applied', applied_by = $1, applied_at = NOW() WHERE id = $2", context.access_id, effect_id)
             await connection.execute(
                 "INSERT INTO audit_logs (session_id, actor_id, action, target_type, target_id, payload) VALUES ($1, $2, 'black_market.apply', 'black_market_effect', $3, $4::jsonb)",

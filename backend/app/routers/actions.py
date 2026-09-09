@@ -144,13 +144,24 @@ async def update_market_ownership(
             elapsed = effective_elapsed_ms(session)
             await close_active_ownership(connection, session, market_id, context.access_id)
             if payload.team_id is not None:
+                ownership_rate = await connection.fetchval(
+                    """
+                    SELECT (c.effect_config->>'rate_per_minute')::integer
+                    FROM black_market_effects e JOIN black_market_cards c ON c.id = e.card_id
+                    WHERE e.session_id = $1 AND e.team_id = $2
+                      AND e.status = 'applied' AND c.effect_type = 'manual_ownership_bonus'
+                    ORDER BY e.applied_at DESC LIMIT 1
+                    """,
+                    context.session_id,
+                    payload.team_id,
+                )
                 await connection.execute(
                     "INSERT INTO market_ownership (session_id, market_id, team_id, started_at, started_elapsed_ms, rate_per_minute) VALUES ($1, $2, $3, NOW(), $4, $5)",
                     context.session_id,
                     market_id,
                     payload.team_id,
                     elapsed,
-                    int(rules["ownership_rate_per_minute"]),
+                    int(ownership_rate or rules["ownership_rate_per_minute"]),
                 )
             await connection.execute(
                 "INSERT INTO audit_logs (session_id, actor_id, action, target_type, target_id, payload) VALUES ($1, $2, 'market_ownership.manual_update', 'market', $3, $4::jsonb)",
@@ -493,13 +504,24 @@ async def apply_challenge_ownership(
             if session["status"] != "running" or live_period(session, rules) < int(rules["challenge_start_period"]):
                 raise HTTPException(status_code=409, detail={"code": "CHALLENGE_NOT_AVAILABLE", "message": "目前尚未到達據點挑戰開放時段。"})
             await close_active_ownership(connection, session, challenge["market_id"], context.access_id)
+            ownership_rate = await connection.fetchval(
+                """
+                SELECT (c.effect_config->>'rate_per_minute')::integer
+                FROM black_market_effects e JOIN black_market_cards c ON c.id = e.card_id
+                WHERE e.session_id = $1 AND e.team_id = $2
+                  AND e.status = 'applied' AND c.effect_type = 'manual_ownership_bonus'
+                ORDER BY e.applied_at DESC LIMIT 1
+                """,
+                context.session_id,
+                challenge["team_id"],
+            )
             await connection.execute(
                 "INSERT INTO market_ownership (session_id, market_id, team_id, started_at, started_elapsed_ms, rate_per_minute) VALUES ($1, $2, $3, NOW(), $4, $5)",
                 context.session_id,
                 challenge["market_id"],
                 challenge["team_id"],
                 elapsed,
-                int(rules["ownership_rate_per_minute"]),
+                int(ownership_rate or rules["ownership_rate_per_minute"]),
             )
             await connection.execute(
                 "UPDATE market_challenges SET ownership_applied_at = NOW(), ownership_applied_by = $1 WHERE id = $2",

@@ -48,7 +48,7 @@
         </div>
         <section class="user-black-market" aria-labelledby="black-market-title">
           <div><h2 id="black-market-title">黑心商人</h2><p>第 2 段起，找到黑心商人後可花 10 枚抽一張卡；先完成現場核對。</p></div>
-          <div v-if="blackMarketCard" class="black-market-card"><span>抽到的效果</span><strong>{{ blackMarketCard.name }}</strong><p>{{ blackMarketCard.description }}</p><button class="user-black-market__apply" type="button" :disabled="blackMarketBusy" @click="applyCard">{{ blackMarketBusy ? '處理中…' : blackMarketCard.effect_type === 'grant_money' ? '領取 30 枚' : '確認已交由現場處理' }}</button></div>
+          <div v-if="blackMarketCard" class="black-market-card"><span>抽到的效果</span><strong>{{ blackMarketCard.name }}</strong><p>{{ blackMarketCard.description }}</p><button class="user-black-market__apply" type="button" :disabled="blackMarketBusy" @click="applyCard">{{ blackMarketBusy ? '處理中…' : cardApplyLabel(blackMarketCard) }}</button></div>
           <template v-else><div class="black-market-checks"><label><input v-model="blackMarketGuards.money" type="checkbox" />金錢袋已出示</label><label><input v-model="blackMarketGuards.team" type="checkbox" />半數隊員已在場</label></div><button class="user-black-market__draw" type="button" :disabled="!canDrawBlackMarket || blackMarketBusy" @click="drawCard">{{ blackMarketBusy ? '抽卡中…' : canDrawBlackMarket ? '支付 10 枚並抽卡' : '第 2 段開放抽卡' }}</button></template>
           <p v-if="blackMarketMessage" class="black-market-message" :class="{ 'is-error': blackMarketMessageType === 'error' }">{{ blackMarketMessage }}</p>
         </section>
@@ -101,6 +101,12 @@ async function loadBoard() {
 }
 
 function requestId() { return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `black-market-${Date.now()}` }
+function cardApplyLabel(card: BlackMarketEffect) {
+  if (card.effect_type === 'grant_money') return '領取 30 枚'
+  if (card.effect_type === 'manual_ownership_bonus') return '套用據點收益 +4'
+  if (card.effect_type === 'manual_return_all_ownership') return '歸還所有據點'
+  return '確認已交由現場處理'
+}
 async function drawCard() {
   if (isDemo.value || !state.token || !canDrawBlackMarket.value) return
   blackMarketBusy.value = true; blackMarketMessage.value = ''
